@@ -125,6 +125,7 @@ let linesData = [];
 let currentLineIdx = 0;
 let currentIndex = 0;
 let totalTyped = 0;
+let totalStrokes = 0;
 let startTime = null;
 let cumulativeErrors = 0;
 let previousInputLength = 0;
@@ -135,6 +136,7 @@ function init() {
     linesData = [];
     currentLineIdx = 0;
     totalTyped = 0;
+    totalStrokes = 0;
     cumulativeErrors = 0;
     previousInputLength = 0;
     isTransitioning = false;
@@ -275,8 +277,9 @@ typingInput.addEventListener('input', (e) => {
     accDisplay.innerText = `${Math.max(0, acc)}%`;
     
     // Auto-Enter Logic with IME Blur Bug Fix
-    if (inputVal.length >= characters.length && allCorrect) {
+    if (inputVal.length >= characters.length) {
         totalTyped += characters.length;
+        totalStrokes += getHangulStrokes(linesData[currentLineIdx].text); 
         currentLineIdx++;
         
         isTransitioning = true;
@@ -302,13 +305,35 @@ typingInput.addEventListener('input', (e) => {
     }
 });
 
+function getHangulStrokes(text) {
+    let strokes = 0;
+    for (let i = 0; i < text.length; i++) {
+        let code = text.charCodeAt(i);
+        if (code >= 44032 && code <= 55203) { // 가~힣
+            let offset = code - 44032;
+            let jong = offset % 28;
+            let jung = Math.floor(offset / 28) % 21;
+            let cho = Math.floor(offset / 28 / 21);
+            strokes += [1,4,8,10,13].includes(cho) ? 2 : 1; // ㄲㄸㅃㅆㅉ
+            strokes += [9,10,11,14,15,16,19].includes(jung) ? 2 : 1; // ㅘㅙㅚㅝㅞㅟㅢ
+            if (jong > 0) strokes += [3,5,6,9,10,11,12,13,14,15,18,20].includes(jong) ? 2 : 1; // 겹받침
+        } else {
+            strokes += 1; // 알파벳, 숫자, 기호, 띄어쓰기 등
+        }
+    }
+    return strokes;
+}
 function updateWPM() {
     if (startTime && (typingInput.value.length > 0 || totalTyped > 0) && modal.classList.contains('hidden')) {
         const now = new Date().getTime();
         const minutes = (now - startTime) / 60000;
         if (minutes > 0) {
-            const wpm = Math.round(((totalTyped + typingInput.value.length) / 5) / minutes);
-            wpmDisplay.innerText = wpm > 0 && wpm < 1500 ? wpm : 0;
+            // 한컴타자연습 기준: 글자수(단어)가 아닌 1분당 실제 친 자모음 개수(Strokes) 계산!
+            const currentLineText = linesData[currentLineIdx] ? linesData[currentLineIdx].text.substring(0, typingInput.value.length) : "";
+            const currentStrokes = getHangulStrokes(currentLineText);
+            
+            const wpm = Math.round((totalStrokes + currentStrokes) / minutes);
+            wpmDisplay.innerText = wpm > 0 && wpm < 2500 ? wpm : 0;
         }
     }
     requestAnimationFrame(updateWPM);
