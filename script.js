@@ -23,9 +23,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
 const firebaseConfig = {
     apiKey: "AIzaSyC09ckhYiiZwyWpL4qDPB2MCWIZP8DrHRA",
     authDomain: "naramarsami-b85a7.firebaseapp.com",
@@ -38,10 +35,10 @@ const firebaseConfig = {
 
 let db = null;
 try {
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
 } catch (e) {
-    console.warn("Firebase가 아직 설정되지 않았습니다. 로컬 모드로 작동합니다.");
+    console.warn("Firebase 초기화 에러 (로컬 모드로 작동):", e);
 }
 
 const textCollections = [
@@ -410,10 +407,10 @@ document.getElementById('submit-feedback-btn').addEventListener('click', async (
     // Firebase 연동 상태에 따라 저장 방식 결정
     if (db && firebaseConfig.apiKey !== "YOUR_API_KEY") {
         try {
-            await addDoc(collection(db, "feedbacks"), feedbackData);
+            await db.collection("feedbacks").add(feedbackData);
             alert('소중한 의견이 서버에 성공적으로 기록되었습니다!');
         } catch(e) {
-            alert('서버 전송 실패. 로컬에 임시 저장합니다.');
+            alert('서버 전송 실패. 로컬에 임시 저장합니다. (보안 규칙이 "테스트 모드"인지 확인하세요!)');
             saveLocalFeedback(feedbackData);
         }
     } else {
@@ -493,11 +490,10 @@ async function showAdminPanel() {
     
     if (db && firebaseConfig.apiKey !== "YOUR_API_KEY") {
         try {
-            const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
-            const snapshot = await getDocs(q);
+            const snapshot = await db.collection("feedbacks").orderBy("timestamp", "desc").get();
             snapshot.forEach(doc => feedbacks.push(doc.data()));
         } catch (e) {
-            list.innerHTML = '<p style="text-align:center; color:red;">서버에서 불러오기 실패</p>';
+            list.innerHTML = '<p style="text-align:center; color:red;">서버에서 불러오기 실패. (보안 규칙 확인)</p>';
             return;
         }
     } else {
