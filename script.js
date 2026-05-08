@@ -435,15 +435,18 @@ function saveLocalFeedback(data) {
 let hangulClickCount = 0;
 let hangulClickTimer = null;
 
-// 보안: 'S.haro'의 SHA-256 해시값 (평문 비밀번호는 절대 소스코드에 노출되지 않음)
-const targetHash = "a93add8c3bc66e3a4685f86d1127c3542c98eb4cf2af98daebe2a3878599b6ff";
+// 보안: 'S.haro'의 해시값 (모든 브라우저/로컬 환경 호환용)
+const targetHash = "-1873070671";
 
-// 입력값을 SHA-256으로 해시화하는 함수
-async function hashPassword(message) {
-    const msgBuffer = new TextEncoder().encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+// 입력값을 해시화하는 함수 (http:// 나 file:// 환경에서도 오류 없이 작동)
+function hashPassword(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash.toString();
 }
 
 document.getElementById('hangul-btn').addEventListener('click', () => {
@@ -463,11 +466,11 @@ document.getElementById('close-admin-login-btn').addEventListener('click', () =>
     document.getElementById('admin-login-modal').classList.add('hidden');
 });
 
-document.getElementById('submit-admin-login-btn').addEventListener('click', async () => {
+document.getElementById('submit-admin-login-btn').addEventListener('click', () => {
     const pwd = document.getElementById('admin-password').value;
     
     // 사용자의 입력값을 해시화하여 안전하게 고정된 해시값과 비교
-    const inputHash = await hashPassword(pwd);
+    const inputHash = hashPassword(pwd);
     
     if (inputHash === targetHash) {
         document.getElementById('admin-login-modal').classList.add('hidden');
