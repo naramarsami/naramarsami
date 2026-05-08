@@ -29,6 +29,11 @@
     border: 0;
 }
 
+/* 보안: 인쇄 및 PDF 저장 방지 */
+@media print {
+    body { display: none !important; }
+}
+
 /* 보안: 복사 방지 CSS */
 body {
     -webkit-user-select: none;

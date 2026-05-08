@@ -1,3 +1,28 @@
+// 보안: 키보드 단축키(복사, 저장, 소스보기, 개발자도구 등) 전면 차단
+document.addEventListener('keydown', (e) => {
+    const cmdOrCtrl = e.metaKey || e.ctrlKey;
+    
+    if (e.key === 'F12') {
+        e.preventDefault();
+        return false;
+    }
+    
+    if (cmdOrCtrl) {
+        const key = e.key.toLowerCase();
+        // S(저장), U(소스보기), P(인쇄), C(복사), X(잘라내기)
+        if (key === 's' || key === 'u' || key === 'p' || key === 'c' || key === 'x') {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Ctrl+Shift+I, J, C (개발자 도구)
+        if (e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) {
+            e.preventDefault();
+            return false;
+        }
+    }
+});
+
 const textCollections = [
     {
         title: "훈민정음 언해본 서문",
