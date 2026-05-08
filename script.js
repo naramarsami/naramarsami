@@ -435,10 +435,8 @@ function saveLocalFeedback(data) {
 let hangulClickCount = 0;
 let hangulClickTimer = null;
 
-// 보안: 'S.haro'의 해시값 (모든 브라우저/로컬 환경 호환용)
 const targetHash = "-1873070671";
 
-// 입력값을 해시화하는 함수 (http:// 나 file:// 환경에서도 오류 없이 작동)
 function hashPassword(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
