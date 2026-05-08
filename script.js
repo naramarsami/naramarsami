@@ -27,13 +27,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
-    // TODO: 파이어베이스 프로젝트 설정값으로 교체하세요! (Firebase Console -> Project Settings)
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyC09ckhYiiZwyWpL4qDPB2MCWIZP8DrHRA",
+    authDomain: "naramarsami-b85a7.firebaseapp.com",
+    projectId: "naramarsami-b85a7",
+    storageBucket: "naramarsami-b85a7.firebasestorage.app",
+    messagingSenderId: "956231831002",
+    appId: "1:956231831002:web:828c8096375a255ef344e3",
+    measurementId: "G-Z4RNVJSKQ3"
 };
 
 let db = null;
