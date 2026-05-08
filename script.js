@@ -464,8 +464,14 @@ document.getElementById('close-admin-login-btn').addEventListener('click', () =>
     document.getElementById('admin-login-modal').classList.add('hidden');
 });
 
+document.getElementById('admin-password').addEventListener('keyup', (e) => {
+    if (e.key === 'Enter') {
+        document.getElementById('submit-admin-login-btn').click();
+    }
+});
+
 document.getElementById('submit-admin-login-btn').addEventListener('click', () => {
-    const pwd = document.getElementById('admin-password').value;
+    const pwd = document.getElementById('admin-password').value.trim(); // 혹시 모를 띄어쓰기 공백 제거
     
     // 사용자의 입력값을 해시화하여 안전하게 고정된 해시값과 비교
     const inputHash = hashPassword(pwd);
