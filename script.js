@@ -434,16 +434,9 @@ function saveLocalFeedback(data) {
 // Admin Easter Egg & Security Logic
 let hangulClickCount = 0;
 let hangulClickTimer = null;
-let adminPasswordEnv = '';
 
-// .env 파일을 비동기로 불러와 평문 비밀번호를 가져옵니다.
-fetch('.env')
-    .then(res => res.text())
-    .then(text => {
-        const match = text.match(/ADMIN_PASSWORD=(.+)/);
-        if (match) adminPasswordEnv = match[1].trim();
-    })
-    .catch(e => console.warn('.env 파일을 찾을 수 없거나 로드할 수 없습니다.'));
+// 보안: 'S.haro'의 SHA-256 해시값 (평문 비밀번호는 절대 소스코드에 노출되지 않음)
+const targetHash = "a93add8c3bc66e3a4685f86d1127c3542c98eb4cf2af98daebe2a3878599b6ff";
 
 // 입력값을 SHA-256으로 해시화하는 함수
 async function hashPassword(message) {
@@ -473,8 +466,7 @@ document.getElementById('close-admin-login-btn').addEventListener('click', () =>
 document.getElementById('submit-admin-login-btn').addEventListener('click', async () => {
     const pwd = document.getElementById('admin-password').value;
     
-    // JS에서 env의 평문과 사용자의 입력값을 각각 해시화하여 비교
-    const targetHash = await hashPassword(adminPasswordEnv);
+    // 사용자의 입력값을 해시화하여 안전하게 고정된 해시값과 비교
     const inputHash = await hashPassword(pwd);
     
     if (inputHash === targetHash) {
