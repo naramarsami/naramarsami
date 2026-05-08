@@ -432,7 +432,7 @@ function saveLocalFeedback(data) {
 let hangulClickCount = 0;
 let hangulClickTimer = null;
 
-const targetHash = "-1873070671";
+const targetHash = "112845";
 
 function hashPassword(str) {
     let hash = 0;
