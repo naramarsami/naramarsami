@@ -182,7 +182,6 @@ function updateActiveCharacter() {
     textDisplay.style.transform = `translateY(-${lineOffsetTop}px)`;
 }
 
-// Bug fix: Prevent Enter key from causing Hancom duplicate pop-out bugs
 typingInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         e.preventDefault();
@@ -240,11 +239,14 @@ typingInput.addEventListener('input', (e) => {
     }
     accDisplay.innerText = `${Math.max(0, acc)}%`;
     
+    // Auto-Enter Logic with IME Blur Bug Fix
     if (inputVal.length >= characters.length && allCorrect) {
         totalTyped += characters.length;
         currentLineIdx++;
         
         isTransitioning = true;
+        // 핵심 수정: 블러 처리를 통해 한글 IME 조합 상태를 강제로 끊어 스페이스/글자 딸려옴 방지
+        typingInput.blur(); 
         typingInput.value = '';
         previousInputLength = 0;
         
@@ -257,6 +259,7 @@ typingInput.addEventListener('input', (e) => {
             setTimeout(() => {
                 setupActiveLine();
                 isTransitioning = false;
+                typingInput.focus();
             }, 150);
         }
     } else {
@@ -336,7 +339,7 @@ document.getElementById('close-ranking-btn').addEventListener('click', () => {
     document.getElementById('ranking-modal').classList.add('hidden');
 });
 
-// Feedback Modal Actions
+// Feedback Webhook Logic
 document.getElementById('feedback-btn').addEventListener('click', () => {
     document.getElementById('feedback-modal').classList.remove('hidden');
 });
@@ -345,13 +348,33 @@ document.getElementById('close-feedback-btn').addEventListener('click', () => {
     document.getElementById('feedback-modal').classList.add('hidden');
 });
 
-document.getElementById('submit-feedback-btn').addEventListener('click', () => {
+document.getElementById('submit-feedback-btn').addEventListener('click', async () => {
     const text = document.getElementById('feedback-text').value;
     if (text.trim() === '') {
         alert('의견을 입력해주세요.');
         return;
     }
-    alert('소중한 의견이 전송되었습니다. 더 나은 나랏말싸미를 만들겠습니다!');
+    
+    // 디스코드 웹훅 연동 (개발자가 본인 웹훅 주소로 변경하면 실제 디스코드로 메시지가 감)
+    const webhookUrl = "여기에_디스코드_웹훅_URL을_붙여넣으세요"; 
+    
+    if (webhookUrl.includes("여기에")) {
+        alert('소중한 의견이 기록되었습니다! (감사합니다!)');
+    } else {
+        try {
+            await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    content: `📜 **나랏말싸미 새 의견 도착**\n> ${text}` 
+                })
+            });
+            alert('소중한 의견이 성공적으로 전송되었습니다!');
+        } catch(error) {
+            alert('전송 중 오류가 발생했습니다. 나중에 다시 시도해주세요.');
+        }
+    }
+    
     document.getElementById('feedback-text').value = '';
     document.getElementById('feedback-modal').classList.add('hidden');
 });

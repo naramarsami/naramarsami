@@ -17,7 +17,24 @@
     padding: 0;
 }
 
+/* SEO 스크린 리더용 숨김 텍스트 */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* 보안: 복사 방지 CSS */
 body {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
     background-color: var(--bg-color);
     color: var(--text-primary);
     font-family: '궁서', 'Gungsuh', 'Noto Serif KR', serif;

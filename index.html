@@ -4,43 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>나랏말싸미 - 한글 타자 연습</title>
-    <meta name="description" content="한글의 아름다움을 타자로 느껴보세요. 훈민정음 서문과 명시를 필사하듯 칠 수 있는 모던한 한글 타자 연습 사이트입니다.">
-    <meta name="keywords" content="나랏말싸미, 한글 타자, 타자 연습, 훈민정음, 시 타자, 필사, 한글 연습">
-    <meta property="og:title" content="나랏말싸미">
-    <meta property="og:description" content="한글의 아름다움을 타자로 느껴보세요. 모던한 감성의 한글 타자 연습 사이트입니다.">
+    
+    <!-- SEO & 검색 최적화 -->
+    <meta name="description" content="한글의 아름다움을 타자로 느껴보세요. 훈민정음 서문과 윤동주, 김소월 등 명시를 필사하듯 칠 수 있는 모던한 한글 타자 연습 사이트입니다.">
+    <meta name="keywords" content="나랏말싸미, 한글 타자, 타자 연습, 훈민정음, 시 타자, 필사, 한글 연습, 타자 치기">
+    <meta name="author" content="나랏말싸미">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://naramarsami.github.io/naramarsami/">
+    
+    <!-- Open Graph (SNS 공유 및 검색 미리보기) -->
+    <meta property="og:title" content="나랏말싸미 - 모던 한글 타자 연습">
+    <meta property="og:description" content="한글의 아름다움을 타자로 느껴보세요. 명시를 필사하는 모던 감성 타자 연습 사이트">
     <meta property="og:type" content="website">
+    <meta property="og:url" content="https://naramarsami.github.io/naramarsami/">
+    <meta property="og:site_name" content="나랏말싸미">
+    
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<!-- 보안: 우클릭, 블록지정, 드래그 복사 원천 차단 -->
+<body oncontextmenu="return false" onselectstart="return false" ondragstart="return false">
     <div class="wrapper">
         <header>
+            <h1 class="sr-only">나랏말싸미 - 한글 타자 연습</h1>
             <div class="logo">나랏말싸미</div>
-            <div class="nav-links">
-                <span id="feedback-btn">의견 남기기</span>
+            <nav class="nav-links" aria-label="메인 메뉴">
+                <span id="feedback-btn" tabindex="0" role="button" title="개발자에게 의견을 보냅니다">의견 남기기</span>
                 <span class="active">한글</span>
-            </div>
+            </nav>
         </header>
 
         <main>
-            <div class="main-content">
+            <article class="main-content">
                 <div class="poem-info" id="poem-info">
                     <span id="poem-title"></span>
                     <span class="divider">-</span>
                     <span id="poem-author"></span>
                 </div>
                 
-                <div class="typing-container">
-                    <div id="text-display" class="text-display">
+                <section class="typing-container" aria-label="타자 연습 영역">
+                    <div id="text-display" class="text-display" aria-hidden="true">
                         <!-- Text will be injected here -->
                     </div>
-                </div>
+                </section>
                 
-                <input type="text" id="typing-input" autocomplete="off" spellcheck="false" autofocus>
-            </div>
+                <!-- 숨겨진 실제 입력창 -->
+                <input type="text" id="typing-input" autocomplete="off" spellcheck="false" autofocus aria-label="타자 입력창">
+            </article>
         </main>
 
         <footer>
-            <div class="stats">
+            <section class="stats" aria-label="현재 타자 통계">
                 <div class="stat">
                     <span class="label">타수</span>
                     <span class="value" id="wpm">0</span>
@@ -49,14 +62,14 @@
                     <span class="label">정확도</span>
                     <span class="value" id="accuracy">100%</span>
                 </div>
-            </div>
+            </section>
         </footer>
     </div>
 
-    <!-- Result Modal (Tab) -->
-    <div id="result-modal" class="modal hidden">
+    <!-- Result Modal -->
+    <div id="result-modal" class="modal hidden" role="dialog" aria-labelledby="modal-title">
         <div class="modal-content">
-            <h2 class="modal-title">작성 완료</h2>
+            <h2 class="modal-title" id="modal-title">작성 완료</h2>
             <div class="modal-poem-info">
                 <span id="modal-poem-title"></span> - <span id="modal-poem-author"></span>
             </div>
@@ -77,15 +90,15 @@
             </div>
             
             <div class="modal-actions">
-                <button id="share-btn" class="secondary">기록 공유</button>
-                <button id="ranking-btn" class="secondary">나의 기록</button>
-                <button id="next-btn">다음 글로</button>
+                <button id="share-btn" class="secondary" title="현재 기록을 복사합니다">기록 공유</button>
+                <button id="ranking-btn" class="secondary" title="내 최고 기록을 확인합니다">나의 기록</button>
+                <button id="next-btn" title="다음 작품을 연습합니다">다음 글로</button>
             </div>
         </div>
     </div>
 
     <!-- Ranking Modal -->
-    <div id="ranking-modal" class="modal hidden">
+    <div id="ranking-modal" class="modal hidden" role="dialog">
         <div class="modal-content">
             <h2 class="modal-title">나의 타자 기록</h2>
             <div class="ranking-list" id="ranking-list">
@@ -96,10 +109,10 @@
     </div>
 
     <!-- Feedback Modal -->
-    <div id="feedback-modal" class="modal hidden">
+    <div id="feedback-modal" class="modal hidden" role="dialog">
         <div class="modal-content">
             <h2 class="modal-title">의견 남기기</h2>
-            <p class="modal-poem-info" style="margin-bottom: 1.5rem;">더 나은 나랏말싸미를 위해 의견을 남겨주세요.</p>
+            <p class="modal-poem-info" style="margin-bottom: 1.5rem;">버그 제보나 추가되었으면 하는 시를 알려주세요!</p>
             <textarea id="feedback-text" placeholder="여기에 의견을 자유롭게 적어주세요..." rows="5"></textarea>
             <div class="modal-actions" style="margin-top: 1.5rem;">
                 <button id="close-feedback-btn" class="secondary">취소</button>
