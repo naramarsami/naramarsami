@@ -391,9 +391,27 @@ document.getElementById('submit-feedback-btn').addEventListener('click', async (
     document.getElementById('feedback-modal').classList.add('hidden');
 });
 
-// Admin Easter Egg Logic
+// Admin Easter Egg & Security Logic
 let hangulClickCount = 0;
 let hangulClickTimer = null;
+let adminHash = '';
+
+// 보안: .env 파일을 비동기로 불러와 해시값을 저장합니다.
+fetch('.env')
+    .then(res => res.text())
+    .then(text => {
+        const match = text.match(/ADMIN_PASSWORD_HASH=(.+)/);
+        if (match) adminHash = match[1].trim();
+    })
+    .catch(e => console.warn('.env 파일을 찾을 수 없거나 로드할 수 없습니다.'));
+
+// 보안: 입력받은 비밀번호를 SHA-256으로 단방향 암호화
+async function hashPassword(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 document.getElementById('hangul-btn').addEventListener('click', () => {
     hangulClickCount++;
@@ -412,10 +430,12 @@ document.getElementById('close-admin-login-btn').addEventListener('click', () =>
     document.getElementById('admin-login-modal').classList.add('hidden');
 });
 
-document.getElementById('submit-admin-login-btn').addEventListener('click', () => {
+document.getElementById('submit-admin-login-btn').addEventListener('click', async () => {
     const pwd = document.getElementById('admin-password').value;
-    // env.js에서 불러온 ENV 객체 사용
-    if (pwd === ENV.ADMIN_PASSWORD) {
+    const inputHash = await hashPassword(pwd);
+    
+    // 사용자가 입력한 비밀번호의 해시값과 .env의 해시값을 비교 (가장 강력한 프론트엔드 보안)
+    if (inputHash === adminHash) {
         document.getElementById('admin-login-modal').classList.add('hidden');
         showAdminPanel();
     } else {
