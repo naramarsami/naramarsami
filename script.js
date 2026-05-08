@@ -380,28 +380,69 @@ document.getElementById('submit-feedback-btn').addEventListener('click', async (
         return;
     }
     
-    // 디스코드 웹훅 연동 (개발자가 본인 웹훅 주소로 변경하면 실제 디스코드로 메시지가 감)
-    const webhookUrl = "여기에_디스코드_웹훅_URL을_붙여넣으세요"; 
+    // 로컬 스토리지에 의견 저장 (웹훅 대신 자체 의견함 사용)
+    let feedbacks = JSON.parse(localStorage.getItem('userFeedbacks') || '[]');
+    feedbacks.push({ date: new Date().toLocaleString(), content: text });
+    localStorage.setItem('userFeedbacks', JSON.stringify(feedbacks));
     
-    if (webhookUrl.includes("여기에")) {
-        alert('소중한 의견이 기록되었습니다! (감사합니다!)');
-    } else {
-        try {
-            await fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    content: `📜 **나랏말싸미 새 의견 도착**\n> ${text}` 
-                })
-            });
-            alert('소중한 의견이 성공적으로 전송되었습니다!');
-        } catch(error) {
-            alert('전송 중 오류가 발생했습니다. 나중에 다시 시도해주세요.');
-        }
-    }
+    alert('소중한 의견이 기록되었습니다! (감사합니다!)');
     
     document.getElementById('feedback-text').value = '';
     document.getElementById('feedback-modal').classList.add('hidden');
+});
+
+// Admin Easter Egg Logic
+let hangulClickCount = 0;
+let hangulClickTimer = null;
+
+document.getElementById('hangul-btn').addEventListener('click', () => {
+    hangulClickCount++;
+    
+    clearTimeout(hangulClickTimer);
+    hangulClickTimer = setTimeout(() => { hangulClickCount = 0; }, 3000); // 3초 내에 10번 클릭해야 함
+    
+    if (hangulClickCount >= 10) {
+        hangulClickCount = 0;
+        document.getElementById('admin-password').value = '';
+        document.getElementById('admin-login-modal').classList.remove('hidden');
+    }
+});
+
+document.getElementById('close-admin-login-btn').addEventListener('click', () => {
+    document.getElementById('admin-login-modal').classList.add('hidden');
+});
+
+document.getElementById('submit-admin-login-btn').addEventListener('click', () => {
+    const pwd = document.getElementById('admin-password').value;
+    // env.js에서 불러온 ENV 객체 사용
+    if (pwd === ENV.ADMIN_PASSWORD) {
+        document.getElementById('admin-login-modal').classList.add('hidden');
+        showAdminPanel();
+    } else {
+        alert('비밀번호가 틀렸습니다.');
+    }
+});
+
+function showAdminPanel() {
+    const list = document.getElementById('admin-feedback-list');
+    const feedbacks = JSON.parse(localStorage.getItem('userFeedbacks') || '[]');
+    
+    if (feedbacks.length === 0) {
+        list.innerHTML = '<p style="text-align:center; color:gray; margin-top:1rem; font-family: Pretendard, sans-serif;">아직 등록된 의견이 없습니다.</p>';
+    } else {
+        list.innerHTML = feedbacks.reverse().map(f => `
+            <div class="feedback-item">
+                <div class="fb-date">${f.date}</div>
+                <div class="fb-content">${f.content}</div>
+            </div>
+        `).join('');
+    }
+    
+    document.getElementById('admin-panel-modal').classList.remove('hidden');
+}
+
+document.getElementById('close-admin-panel-btn').addEventListener('click', () => {
+    document.getElementById('admin-panel-modal').classList.add('hidden');
 });
 
 // Manage global focus

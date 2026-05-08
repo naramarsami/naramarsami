@@ -29,7 +29,7 @@
             <div class="logo">나랏말싸미</div>
             <nav class="nav-links" aria-label="메인 메뉴">
                 <span id="feedback-btn" tabindex="0" role="button" title="개발자에게 의견을 보냅니다">의견 남기기</span>
-                <span class="active">한글</span>
+                <span class="active" id="hangul-btn">한글</span>
             </nav>
         </header>
 
@@ -121,6 +121,31 @@
         </div>
     </div>
 
+    <!-- Admin Login Modal -->
+    <div id="admin-login-modal" class="modal hidden" role="dialog">
+        <div class="modal-content">
+            <h2 class="modal-title">관리자 접속</h2>
+            <p class="modal-poem-info" style="margin-bottom: 1.5rem;">비밀번호를 입력하세요.</p>
+            <input type="password" id="admin-password" class="auth-input" placeholder="비밀번호" autocomplete="off">
+            <div class="modal-actions" style="margin-top: 1.5rem;">
+                <button id="close-admin-login-btn" class="secondary">취소</button>
+                <button id="submit-admin-login-btn">접속</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div id="admin-panel-modal" class="modal hidden" role="dialog">
+        <div class="modal-content" style="min-width: 600px;">
+            <h2 class="modal-title">사용자 의견함</h2>
+            <div class="ranking-list" id="admin-feedback-list">
+                <!-- Feedbacks injected here -->
+            </div>
+            <button id="close-admin-panel-btn" class="secondary" style="margin-top: 2rem;">닫기</button>
+        </div>
+    </div>
+
+    <script src="env.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
