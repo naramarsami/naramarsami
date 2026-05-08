@@ -432,16 +432,14 @@ function saveLocalFeedback(data) {
 let hangulClickCount = 0;
 let hangulClickTimer = null;
 
-const targetHash = "112845";
+const targetHash = "cmdi";
 
 function hashPassword(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
+    try {
+        return btoa(str); // 안정성이 가장 뛰어난 내장 인코딩 방식 사용
+    } catch(e) {
+        return "error"; // 한글 등 특수문자 입력 시 에러 방지 및 오답 처리
     }
-    return hash.toString();
 }
 
 document.getElementById('hangul-btn').addEventListener('click', () => {
