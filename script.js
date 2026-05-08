@@ -275,7 +275,7 @@ typingInput.addEventListener('input', (e) => {
     accDisplay.innerText = `${Math.max(0, acc)}%`;
     
     // Auto-Enter Logic with IME Blur Bug Fix
-    if (inputVal.length >= characters.length && allCorrect) {
+    if (inputVal.length >= characters.length) {
         totalTyped += characters.length;
         currentLineIdx++;
         
