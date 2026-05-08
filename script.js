@@ -23,6 +23,27 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    // TODO: 파이어베이스 프로젝트 설정값으로 교체하세요! (Firebase Console -> Project Settings)
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
+let db = null;
+try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+} catch (e) {
+    console.warn("Firebase가 아직 설정되지 않았습니다. 로컬 모드로 작동합니다.");
+}
+
 const textCollections = [
     {
         title: "훈민정음 언해본 서문",
@@ -380,32 +401,51 @@ document.getElementById('submit-feedback-btn').addEventListener('click', async (
         return;
     }
     
-    // 로컬 스토리지에 의견 저장 (웹훅 대신 자체 의견함 사용)
-    let feedbacks = JSON.parse(localStorage.getItem('userFeedbacks') || '[]');
-    feedbacks.push({ date: new Date().toLocaleString(), content: text });
-    localStorage.setItem('userFeedbacks', JSON.stringify(feedbacks));
+    const feedbackData = {
+        content: text,
+        date: new Date().toLocaleString(),
+        timestamp: Date.now()
+    };
     
-    alert('소중한 의견이 기록되었습니다! (감사합니다!)');
+    // Firebase 연동 상태에 따라 저장 방식 결정
+    if (db && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        try {
+            await addDoc(collection(db, "feedbacks"), feedbackData);
+            alert('소중한 의견이 서버에 성공적으로 기록되었습니다!');
+        } catch(e) {
+            alert('서버 전송 실패. 로컬에 임시 저장합니다.');
+            saveLocalFeedback(feedbackData);
+        }
+    } else {
+        saveLocalFeedback(feedbackData);
+        alert('소중한 의견이 기기에 임시 기록되었습니다! (DB 연동 필요)');
+    }
     
     document.getElementById('feedback-text').value = '';
     document.getElementById('feedback-modal').classList.add('hidden');
 });
 
+function saveLocalFeedback(data) {
+    let feedbacks = JSON.parse(localStorage.getItem('userFeedbacks') || '[]');
+    feedbacks.push(data);
+    localStorage.setItem('userFeedbacks', JSON.stringify(feedbacks));
+}
+
 // Admin Easter Egg & Security Logic
 let hangulClickCount = 0;
 let hangulClickTimer = null;
-let adminHash = '';
+let adminPasswordEnv = '';
 
-// 보안: .env 파일을 비동기로 불러와 해시값을 저장합니다.
+// .env 파일을 비동기로 불러와 평문 비밀번호를 가져옵니다.
 fetch('.env')
     .then(res => res.text())
     .then(text => {
-        const match = text.match(/ADMIN_PASSWORD_HASH=(.+)/);
-        if (match) adminHash = match[1].trim();
+        const match = text.match(/ADMIN_PASSWORD=(.+)/);
+        if (match) adminPasswordEnv = match[1].trim();
     })
     .catch(e => console.warn('.env 파일을 찾을 수 없거나 로드할 수 없습니다.'));
 
-// 보안: 입력받은 비밀번호를 SHA-256으로 단방향 암호화
+// 입력값을 SHA-256으로 해시화하는 함수
 async function hashPassword(message) {
     const msgBuffer = new TextEncoder().encode(message);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -432,10 +472,12 @@ document.getElementById('close-admin-login-btn').addEventListener('click', () =>
 
 document.getElementById('submit-admin-login-btn').addEventListener('click', async () => {
     const pwd = document.getElementById('admin-password').value;
+    
+    // JS에서 env의 평문과 사용자의 입력값을 각각 해시화하여 비교
+    const targetHash = await hashPassword(adminPasswordEnv);
     const inputHash = await hashPassword(pwd);
     
-    // 사용자가 입력한 비밀번호의 해시값과 .env의 해시값을 비교 (가장 강력한 프론트엔드 보안)
-    if (inputHash === adminHash) {
+    if (inputHash === targetHash) {
         document.getElementById('admin-login-modal').classList.add('hidden');
         showAdminPanel();
     } else {
@@ -443,22 +485,36 @@ document.getElementById('submit-admin-login-btn').addEventListener('click', asyn
     }
 });
 
-function showAdminPanel() {
+async function showAdminPanel() {
     const list = document.getElementById('admin-feedback-list');
-    const feedbacks = JSON.parse(localStorage.getItem('userFeedbacks') || '[]');
+    list.innerHTML = '<p style="text-align:center; color:gray; margin-top:1rem;">불러오는 중...</p>';
+    document.getElementById('admin-panel-modal').classList.remove('hidden');
+    
+    let feedbacks = [];
+    
+    if (db && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        try {
+            const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
+            const snapshot = await getDocs(q);
+            snapshot.forEach(doc => feedbacks.push(doc.data()));
+        } catch (e) {
+            list.innerHTML = '<p style="text-align:center; color:red;">서버에서 불러오기 실패</p>';
+            return;
+        }
+    } else {
+        feedbacks = JSON.parse(localStorage.getItem('userFeedbacks') || '[]').reverse();
+    }
     
     if (feedbacks.length === 0) {
         list.innerHTML = '<p style="text-align:center; color:gray; margin-top:1rem; font-family: Pretendard, sans-serif;">아직 등록된 의견이 없습니다.</p>';
     } else {
-        list.innerHTML = feedbacks.reverse().map(f => `
+        list.innerHTML = feedbacks.map(f => `
             <div class="feedback-item">
                 <div class="fb-date">${f.date}</div>
                 <div class="fb-content">${f.content}</div>
             </div>
         `).join('');
     }
-    
-    document.getElementById('admin-panel-modal').classList.remove('hidden');
 }
 
 document.getElementById('close-admin-panel-btn').addEventListener('click', () => {
