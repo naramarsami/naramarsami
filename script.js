@@ -23,22 +23,14 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-const firebaseConfig = {
-    apiKey: "AIzaSyC09ckhYiiZwyWpL4qDPB2MCWIZP8DrHRA",
-    authDomain: "naramarsami-b85a7.firebaseapp.com",
-    projectId: "naramarsami-b85a7",
-    storageBucket: "naramarsami-b85a7.firebasestorage.app",
-    messagingSenderId: "956231831002",
-    appId: "1:956231831002:web:828c8096375a255ef344e3",
-    measurementId: "G-Z4RNVJSKQ3"
-};
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 
-let db = null;
+let supabase = null;
 try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } catch (e) {
-    console.warn("Firebase 초기화 에러 (로컬 모드로 작동):", e);
+    console.warn("Supabase 초기화 에러 (로컬 모드로 작동):", e);
 }
 
 const textCollections = [
@@ -404,13 +396,14 @@ document.getElementById('submit-feedback-btn').addEventListener('click', async (
         timestamp: Date.now()
     };
     
-    // Firebase 연동 상태에 따라 저장 방식 결정
-    if (db && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+    // Supabase 연동 상태에 따라 저장 방식 결정
+    if (supabase && SUPABASE_URL !== "YOUR_SUPABASE_URL") {
         try {
-            await db.collection("feedbacks").add(feedbackData);
+            const { error } = await supabase.from('feedbacks').insert([feedbackData]);
+            if (error) throw error;
             alert('소중한 의견이 서버에 성공적으로 기록되었습니다!');
         } catch(e) {
-            alert('서버 전송 실패. 로컬에 임시 저장합니다. (보안 규칙이 "테스트 모드"인지 확인하세요!)');
+            alert('서버 전송 실패. 로컬에 임시 저장합니다. (Supabase 테이블 설정을 확인하세요!)');
             saveLocalFeedback(feedbackData);
         }
     } else {
@@ -486,12 +479,13 @@ async function showAdminPanel() {
     
     let feedbacks = [];
     
-    if (db && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+    if (supabase && SUPABASE_URL !== "YOUR_SUPABASE_URL") {
         try {
-            const snapshot = await db.collection("feedbacks").orderBy("timestamp", "desc").get();
-            snapshot.forEach(doc => feedbacks.push(doc.data()));
+            const { data, error } = await supabase.from('feedbacks').select('*').order('timestamp', { ascending: false });
+            if (error) throw error;
+            feedbacks = data;
         } catch (e) {
-            list.innerHTML = '<p style="text-align:center; color:red;">서버에서 불러오기 실패. (보안 규칙 확인)</p>';
+            list.innerHTML = '<p style="text-align:center; color:red;">서버에서 불러오기 실패. (Supabase 연결 확인)</p>';
             return;
         }
     } else {
