@@ -26,9 +26,9 @@ document.addEventListener('keydown', (e) => {
 const SUPABASE_URL = "https://cohakvagndxqrptbbydg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvaGFrdmFnbmR4cXJwdGJieWRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNjI2ODksImV4cCI6MjA4OTczODY4OX0.6xiGPUnj9IWVtZu_IMAtkROk7aU5DSeBSJfYn-6FcW8";
 
-let supabase = null;
+let supabaseClient = null;
 try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } catch (e) {
     console.warn("Supabase 초기화 에러 (로컬 모드로 작동):", e);
 }
@@ -397,9 +397,9 @@ document.getElementById('submit-feedback-btn').addEventListener('click', async (
     };
     
     // Supabase 연동 상태에 따라 저장 방식 결정
-    if (supabase && SUPABASE_URL !== "YOUR_SUPABASE_URL") {
+    if (supabaseClient && SUPABASE_URL !== "YOUR_SUPABASE_URL") {
         try {
-            const { error } = await supabase.from('feedbacks').insert([feedbackData]);
+            const { error } = await supabaseClient.from('feedbacks').insert([feedbackData]);
             if (error) throw error;
             alert('소중한 의견이 서버에 성공적으로 기록되었습니다!');
         } catch(e) {
@@ -479,9 +479,9 @@ async function showAdminPanel() {
     
     let feedbacks = [];
     
-    if (supabase && SUPABASE_URL !== "YOUR_SUPABASE_URL") {
+    if (supabaseClient && SUPABASE_URL !== "YOUR_SUPABASE_URL") {
         try {
-            const { data, error } = await supabase.from('feedbacks').select('*').order('timestamp', { ascending: false });
+            const { data, error } = await supabaseClient.from('feedbacks').select('*').order('timestamp', { ascending: false });
             if (error) throw error;
             feedbacks = data;
         } catch (e) {
