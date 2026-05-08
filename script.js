@@ -23,8 +23,8 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-const SUPABASE_URL = "YOUR_SUPABASE_URL";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const SUPABASE_URL = "https://cohakvagndxqrptbbydg.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvaGFrdmFnbmR4cXJwdGJieWRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNjI2ODksImV4cCI6MjA4OTczODY4OX0.6xiGPUnj9IWVtZu_IMAtkROk7aU5DSeBSJfYn-6FcW8";
 
 let supabase = null;
 try {
