@@ -339,6 +339,10 @@ function updateActiveCharacter() {
 typingInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         e.preventDefault();
+        // 수동 엔터 허용: 오타가 있더라도 사용자가 강제로 다음 줄로 넘어가고 싶을 때 허용!
+        if (!isTransitioning) {
+            moveToNextLine();
+        }
     }
     if (e.key === 'Backspace' && typingInput.value === '' && currentLineIdx > 0) {
         e.preventDefault();
@@ -415,39 +419,47 @@ typingInput.addEventListener('input', (e) => {
     }
     accDisplay.innerText = `${Math.max(0, acc)}%`;
     
-    // Auto-Enter Logic with IME Blur Bug Fix
-    const isLengthReached = inputVal.length >= characters.length;
-    const targetLastChar = characters[characters.length - 1];
-    const typedLastChar = inputVal[characters.length - 1];
-    
-    // 마지막 글자가 목표 글자와 일치할 때만 자동 엔터 진행
-    if (isLengthReached && typedLastChar === targetLastChar) {
-        totalTyped += characters.length;
-        totalStrokes += getHangulStrokes(linesData[currentLineIdx].text); 
-        currentLineIdx++;
-        
-        isTransitioning = true;
-        // 핵심 수정: 블러 처리를 통해 한글 IME 조합 상태를 강제로 끊어 스페이스/글자 딸려옴 방지
-        typingInput.blur(); 
-        typingInput.value = '';
-        previousInputLength = 0;
-        
-        if (currentLineIdx >= linesData.length) {
-            setTimeout(() => {
-                showModal();
-                isTransitioning = false;
-            }, 300);
-        } else {
-            setTimeout(() => {
-                setupActiveLine();
-                isTransitioning = false;
-                typingInput.focus();
-            }, 150);
-        }
+    // Strict Auto-Enter Logic: 전체 텍스트가 100% 완벽하게 일치할 때만 자동 넘김!
+    // 이를 통해 오타가 있는 상태에서 길이가 우연히 맞아 오작동하는 버그를 원천 차단합니다.
+    const targetText = linesData[currentLineIdx].text;
+    if (inputVal === targetText) {
+        moveToNextLine();
     } else {
         updateActiveCharacter();
     }
 });
+
+function moveToNextLine() {
+    if (isTransitioning) return;
+    
+    const activeLineDiv = document.getElementById(`line-${currentLineIdx}`);
+    if (!activeLineDiv) return;
+    
+    const characters = linesData[currentLineIdx].characters;
+    
+    totalTyped += characters.length;
+    totalStrokes += getHangulStrokes(linesData[currentLineIdx].text); 
+    currentLineIdx++;
+    
+    isTransitioning = true;
+    // 블러 처리를 통해 한글 IME 조합 상태를 강제로 끊어 스페이스/글자 딸려옴 방지
+    typingInput.blur(); 
+    typingInput.value = '';
+    previousInputLength = 0;
+    
+    if (currentLineIdx >= linesData.length) {
+        setTimeout(() => {
+            showModal();
+            isTransitioning = false;
+        }, 300);
+    } else {
+        setTimeout(() => {
+            setupActiveLine();
+            isTransitioning = false;
+            typingInput.focus();
+        }, 150);
+    }
+}
 
 function getHangulStrokes(text) {
     let strokes = 0;
