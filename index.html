@@ -27,16 +27,9 @@
         <header>
             <h1 class="sr-only">나랏말싸미 - 한글 타자 연습</h1>
             <div class="logo">나랏말싸미</div>
-            <nav class="nav-links" aria-label="메인 메뉴" style="display: flex; align-items: center; gap: 1rem;">
-                <select id="font-selector" style="font-family: inherit; font-size: 0.9rem; border: 1px solid var(--text-secondary); border-radius: 6px; padding: 4px 8px; outline: none; cursor: pointer; color: var(--text-primary); background: transparent;" title="폰트 변경">
-                    <option value="'Pretendard', sans-serif">프리텐다드</option>
-                    <option value="'궁서', 'Gungsuh', 'Noto Serif KR', serif">궁서체</option>
-                    <option value="'Noto Serif KR', serif">명조체</option>
-                    <option value="'JetBrains Mono', monospace">고딕체(모노)</option>
-                </select>
-                <span id="skip-btn" tabindex="0" role="button" title="다른 시로 넘어갑니다">다른 시 쓰기</span>
-                <span id="feedback-btn" tabindex="0" role="button" title="개발자에게 의견을 보냅니다">의견 남기기</span>
+            <nav class="nav-links" aria-label="메인 메뉴">
                 <span class="active" id="hangul-btn">한글</span>
+                <span class="divider" style="color: var(--text-secondary);">/</span>
                 <span id="english-btn" style="color: var(--text-secondary);">English</span>
             </nav>
         </header>
@@ -61,6 +54,17 @@
         </main>
 
         <footer>
+            <div class="footer-controls" style="display: flex; gap: 1.5rem; align-items: center; font-size: 1rem; font-weight: 600; color: var(--text-secondary); cursor: pointer;">
+                <select id="font-selector" style="appearance: none; border: none; background: none; font-family: inherit; font-size: inherit; font-weight: inherit; color: inherit; outline: none; cursor: pointer;" title="폰트 변경">
+                    <option value="'Pretendard', sans-serif">Pretendard</option>
+                    <option value="'궁서', 'Gungsuh', 'Noto Serif KR', serif">궁서체</option>
+                    <option value="'Noto Serif KR', serif">명조체</option>
+                    <option value="'JetBrains Mono', monospace">Mono</option>
+                </select>
+                <span id="skip-btn" tabindex="0" role="button" style="transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color=''">새 글</span>
+                <span id="feedback-btn" tabindex="0" role="button" style="transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color=''">의견</span>
+            </div>
+
             <section class="stats" aria-label="현재 타자 통계">
                 <div class="stat">
                     <span class="label">타수</span>

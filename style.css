@@ -203,8 +203,16 @@ main {
 
 footer {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
+    align-items: center;
     padding-bottom: 3rem;
+}
+
+.footer-controls select {
+    transition: color 0.2s;
+}
+.footer-controls select:hover {
+    color: var(--text-primary) !important;
 }
 
 .stats {
