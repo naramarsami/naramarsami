@@ -28,9 +28,25 @@
             <h1 class="sr-only">나랏말싸미 - 한글 타자 연습</h1>
             <div class="logo">나랏말싸미</div>
             <nav class="nav-links" aria-label="메인 메뉴">
-                <span class="active" id="hangul-btn">한글</span>
-                <span class="divider" style="color: var(--text-secondary);">/</span>
-                <span id="english-btn" style="color: var(--text-secondary);">English</span>
+                <div class="lang-selector">
+                    <span class="active" id="hangul-btn">한글</span>
+                    <span class="nav-divider">/</span>
+                    <span id="english-btn">English</span>
+                </div>
+                <div class="nav-controls">
+                    <button id="search-btn" class="icon-btn" aria-label="글 검색">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </button>
+                    <button id="skip-btn" class="icon-btn" aria-label="새 글 (새로고침)">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    </button>
+                    <button id="feedback-btn" class="icon-btn" aria-label="의견">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    </button>
+                    <button id="settings-btn" class="icon-btn" aria-label="설정">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </button>
+                </div>
             </nav>
         </header>
 
@@ -54,16 +70,6 @@
         </main>
 
         <footer>
-            <div class="footer-controls" style="display: flex; gap: 1.5rem; align-items: center; font-size: 1rem; font-weight: 600; color: var(--text-secondary); cursor: pointer;">
-                <select id="font-selector" style="appearance: none; border: none; background: none; font-family: inherit; font-size: inherit; font-weight: inherit; color: inherit; outline: none; cursor: pointer;" title="폰트 변경">
-                    <option value="'Pretendard', sans-serif">Pretendard</option>
-                    <option value="'궁서', 'Gungsuh', 'Noto Serif KR', serif">궁서체</option>
-                    <option value="'Noto Serif KR', serif">명조체</option>
-                    <option value="'JetBrains Mono', monospace">Mono</option>
-                </select>
-                <span id="skip-btn" tabindex="0" role="button" style="transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color=''">새 글</span>
-                <span id="feedback-btn" tabindex="0" role="button" style="transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color=''">의견</span>
-            </div>
 
             <section class="stats" aria-label="현재 타자 통계">
                 <div class="stat">
@@ -154,6 +160,98 @@
                 <!-- Feedbacks injected here -->
             </div>
             <button id="close-admin-panel-btn" class="secondary" style="margin-top: 2rem;">닫기</button>
+        </div>
+    </div>
+
+    <!-- Unified Settings Modal -->
+    <div id="settings-modal" class="modal hidden" role="dialog">
+        <div class="modal-content settings-content">
+            <h2 class="modal-title">설정</h2>
+            <p class="modal-poem-info" style="margin-bottom: 1.5rem;">자신만의 작업 환경을 꾸며보세요.</p>
+            
+            <div class="settings-tabs">
+                <button class="settings-tab-btn active" data-target="panel-type">글 종류</button>
+                <button class="settings-tab-btn" data-target="panel-font">글꼴 설정</button>
+                <button class="settings-tab-btn" data-target="panel-theme">테마 & 색상</button>
+            </div>
+            
+            <div class="settings-panels">
+                <!-- Panel: Text Type -->
+                <div class="settings-panel active" id="panel-type">
+                    <h3 class="section-title sr-only">글 종류</h3>
+                    <div class="type-flex">
+                        <div class="type-card selected" data-type="poem" id="type-card-poem">
+                            <h3>시 (Poem)</h3>
+                            <div class="type-preview" style="font-size: 1rem;">나 보기가 역겨워 가실 때에는<br>말없이 고이 보내 드리오리다.</div>
+                        </div>
+                        <div class="type-card" data-type="long" id="type-card-long">
+                            <h3>긴 글 (Long Text)</h3>
+                            <div class="type-preview" style="font-size: 1rem;">여름장이란 애시당초에 글러서, 해는 아직 중천에 있건만 장판은 벌써 쓸쓸하고...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel: Fonts -->
+                <div class="settings-panel" id="panel-font" style="display: none;">
+                    <h3 class="section-title sr-only">글꼴</h3>
+                    <div class="options-grid" id="font-options">
+                        <div class="option-card selected" data-font="'Pretendard', sans-serif" style="font-family: 'Pretendard', sans-serif;">Pretendard</div>
+                        <div class="option-card" data-font="'Gungsuh', '궁서', serif" style="font-family: '궁서', serif;">궁서체</div>
+                        <div class="option-card" data-font="'Noto Serif KR', serif" style="font-family: 'Noto Serif KR', serif;">Noto Serif</div>
+                        <div class="option-card" data-font="'Nanum Myeongjo', serif" style="font-family: 'Nanum Myeongjo', serif;">나눔명조</div>
+                        <div class="option-card" data-font="'Nanum Gothic', sans-serif" style="font-family: 'Nanum Gothic', sans-serif;">나눔고딕</div>
+                        <div class="option-card" data-font="'Gowun Batang', serif" style="font-family: 'Gowun Batang', serif;">고운바탕</div>
+                        <div class="option-card" data-font="'Gamja Flower', cursive" style="font-family: 'Gamja Flower', cursive;">감자꽃</div>
+                        <div class="option-card" data-font="'Single Day', cursive" style="font-family: 'Single Day', cursive;">싱글데이</div>
+                        <div class="option-card" data-font="'JetBrains Mono', monospace" style="font-family: 'JetBrains Mono', monospace;">JetBrains</div>
+                    </div>
+                </div>
+
+                <!-- Panel: Themes -->
+                <div class="settings-panel" id="panel-theme" style="display: none;">
+                    <h3 class="section-title sr-only">테마</h3>
+                    <div class="theme-options">
+                        <div class="theme-card selected" data-theme="light">
+                            <div class="theme-swatch" style="background:#ffffff; border: 1px solid #ddd;"></div>
+                            <span>라이트</span>
+                        </div>
+                        <div class="theme-card" data-theme="dark">
+                            <div class="theme-swatch" style="background:#0c0c0c;"></div>
+                            <span>디프 다크</span>
+                        </div>
+                        <div class="theme-card" data-theme="sepia">
+                            <div class="theme-swatch" style="background:#f4ecd8;"></div>
+                            <span>세피아</span>
+                        </div>
+                        <div class="theme-card" data-theme="ocean">
+                            <div class="theme-swatch" style="background:#e8f4f8;"></div>
+                            <span>미드나잇 오션</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="close-settings-modal-btn" style="margin-top: 1.5rem; width: 100%;" class="secondary">완료</button>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="search-modal" class="modal hidden" role="dialog">
+        <div class="modal-content search-modal-content">
+            <div class="search-header">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="search-input" placeholder="제목, 작가, 또는 키워드(사랑, 별 등) 검색..." autocomplete="off">
+            </div>
+            <div class="search-results-container">
+                <div id="search-results" class="search-results-grid">
+                    <!-- Dynamically generated searchable results go here -->
+                </div>
+                <div id="search-empty-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 0; text-align: center;">
+                    <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 1.2rem; font-weight: 600;">원하는 글을 찾을 수 없습니다.</p>
+                    <button id="request-poem-btn" style="background: transparent; border: 2px solid var(--accent-color); color: var(--accent-color); border-radius: 12px; font-weight: 800;">의견에 시 추가 요청하기</button>
+                </div>
+            </div>
+            <button id="close-search-modal-btn" class="secondary" style="margin-top: 1.5rem; border: none; background: none; color: var(--text-secondary); font-weight: 700; cursor: pointer;">닫기</button>
         </div>
     </div>
 

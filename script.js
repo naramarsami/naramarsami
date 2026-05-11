@@ -33,10 +33,11 @@ try {
     console.warn("Supabase 초기화 에러 (로컬 모드로 작동):", e);
 }
 
-const textCollections = [
+const poemCollections = [
     {
         title: "훈민정음 언해본 서문",
         author: "세종대왕",
+        keywords: ["훈민정음", "한글", "세종대왕", "역사", "고전", "서문"],
         lines: [
             "나라의 말이 중국과 달라",
             "문자와 서로 통하지 아니하므로",
@@ -50,6 +51,7 @@ const textCollections = [
     {
         title: "별 헤는 밤",
         author: "윤동주",
+        keywords: ["별", "가을", "그리움", "추억", "사랑", "어머니", "윤동주"],
         lines: [
             "계절이 지나가는 하늘에는 가을로 가득 차 있습니다.",
             "나는 아무 걱정도 없이 가을 속의 별들을 다 헤일 듯합니다.",
@@ -64,6 +66,7 @@ const textCollections = [
     {
         title: "진달래꽃",
         author: "김소월",
+        keywords: ["사랑", "이별", "슬픔", "전통", "진달래", "김소월"],
         lines: [
             "나 보기가 역겨워 가실 때에는",
             "말없이 고이 보내 드리오리다.",
@@ -76,21 +79,9 @@ const textCollections = [
         ]
     },
     {
-        title: "메밀꽃 필 무렵",
-        author: "이효석",
-        lines: [
-            "여름장이란 애시당초에 글러서, 해는 아직 중천에 있건만",
-            "장판은 벌써 쓸쓸하고 더운 햇발이 벌여놓은 전휘장 밑으로",
-            "등줄기를 훅훅 볶는다.",
-            "마을 사람들은 거지반 돌아간 뒤요,",
-            "팔리지 못한 나무꾼 패가 길거리에 궁싯거리고들 있으나,",
-            "석유병이나 받고 고기마리나 사면 족할 이 축들을 바라고",
-            "언제까지든지 버티고 있을 법은 없다."
-        ]
-    },
-    {
         title: "서시",
         author: "윤동주",
+        keywords: ["자아", "성찰", "별", "부끄럼", "극복", "윤동주"],
         lines: [
             "죽는 날까지 하늘을 우러러",
             "한 점 부끄럼이 없기를,",
@@ -106,6 +97,7 @@ const textCollections = [
     {
         title: "초혼",
         author: "김소월",
+        keywords: ["이별", "슬픔", "죽음", "사랑", "초혼", "김소월"],
         lines: [
             "산산이 부서진 이름이여!",
             "허공 중에 헤어진 이름이여!",
@@ -120,6 +112,7 @@ const textCollections = [
     {
         title: "님의 침묵",
         author: "한용운",
+        keywords: ["침묵", "님", "불교", "조국", "저항", "한용운", "사랑"],
         lines: [
             "님은 갔습니다. 아아, 사랑하는 나의 님은 갔습니다.",
             "푸른 산빛을 깨치고 단풍나무 숲을 향하여 난 작은 길을 걸어서 차마 떨치고 갔습니다.",
@@ -129,10 +122,51 @@ const textCollections = [
     }
 ];
 
+const longCollections = [
+    {
+        title: "메밀꽃 필 무렵",
+        author: "이효석",
+        keywords: ["나귀", "달밤", "장돌뱅이", "소설", "이효석", "추억", "사랑"],
+        lines: [
+            "여름장이란 애시당초에 글러서, 해는 아직 중천에 있건만",
+            "장판은 벌써 쓸쓸하고 더운 햇발이 벌여놓은 전휘장 밑으로",
+            "등줄기를 훅훅 볶는다.",
+            "마을 사람들은 거지반 돌아간 뒤요,",
+            "팔리지 못한 나무꾼 패가 길거리에 궁싯거리고들 있으나,",
+            "석유병이나 받고 고기마리나 사면 족할 이 축들을 바라고",
+            "언제까지든지 버티고 있을 법은 없다."
+        ]
+    },
+    {
+        title: "애국가",
+        author: "작자미상",
+        keywords: ["애국", "나라", "국가", "노래", "애국가"],
+        lines: [
+            "동해 물과 백두산이 마르고 닳도록 하느님이 보우하사 우리나라 만세",
+            "무궁화 삼천리 화려 강산 대한 사람 대한으로 길이 보전하세",
+            "남산 위에 저 소나무 철갑을 두른 듯 바람 서리 불변함은 우리 기상일세",
+            "가을 하늘 공활한데 높고 구름 없이 밝은 달은 우리 가슴 일편단심일세",
+            "이 기상과 이 맘으로 충성을 다하여 괴로우나 즐거우나 나라 사랑하세"
+        ]
+    },
+    {
+        title: "동백꽃",
+        author: "김유정",
+        keywords: ["감자", "사랑", "닭", "싸움", "소년", "소녀", "유머", "소설", "김유정"],
+        lines: [
+            "오늘도 우리 수탉이 막 조였다. 내가 점심을 먹고 나무를 하러 갈 양으로 나올 때였다.",
+            "산으로 올라서려니까 등 뒤에서 푸드득푸드득 하고 닭의 홰치는 소리가 들린다.",
+            "깜짝 놀라며 고개를 돌려보니 아니나 다르랴, 두 놈이 또 붙었다.",
+            "점순네 수탉은 대강이가 크고 억세게 생겨서 얼핏 보면 꼭 개 같았다."
+        ]
+    }
+];
+
 const englishCollections = [
     {
         title: "The Road Not Taken",
         author: "Robert Frost",
+        keywords: ["nature", "choice", "classic"],
         lines: [
             "Two roads diverged in a yellow wood,",
             "And sorry I could not travel both",
@@ -144,6 +178,7 @@ const englishCollections = [
     {
         title: "Daffodils",
         author: "William Wordsworth",
+        keywords: ["nature", "beauty", "lake"],
         lines: [
             "I wandered lonely as a cloud",
             "That floats on high o'er vales and hills,",
@@ -156,6 +191,7 @@ const englishCollections = [
     {
         title: "Ozymandias",
         author: "Percy Bysshe Shelley",
+        keywords: ["history", "time", "king"],
         lines: [
             "I met a traveller from an antique land,",
             "Who said—“Two vast and trunkless legs of stone",
@@ -168,6 +204,9 @@ const englishCollections = [
 ];
 
 let currentLang = 'ko';
+let currentType = 'poem'; // default: poem
+let currentFont = "'Pretendard', sans-serif"; // default: Pretendard
+let currentTheme = 'light';
 
 const textDisplay = document.getElementById('text-display');
 const typingInput = document.getElementById('typing-input');
@@ -195,7 +234,7 @@ let cumulativeErrors = 0;
 let previousInputLength = 0;
 let isTransitioning = false;
 
-function init() {
+function init(chosenPoem = null) {
     textDisplay.innerHTML = '';
     linesData = [];
     currentLineIdx = 0;
@@ -206,9 +245,23 @@ function init() {
     isTransitioning = false;
     startTime = null;
     
-    currentPoem = currentLang === 'ko' ? textCollections[Math.floor(Math.random() * textCollections.length)] : englishCollections[Math.floor(Math.random() * englishCollections.length)];
+    if (chosenPoem) {
+        currentPoem = chosenPoem;
+    } else {
+        let pool = [];
+        if (currentLang === 'ko') {
+            pool = currentType === 'poem' ? poemCollections : longCollections;
+        } else {
+            pool = englishCollections;
+        }
+        currentPoem = pool[Math.floor(Math.random() * pool.length)];
+    }
+    
     poemTitle.innerText = currentPoem.title;
     poemAuthor.innerText = currentPoem.author;
+    
+    // 폰트 적용
+    textDisplay.style.fontFamily = currentFont;
     
     currentPoem.lines.forEach((line, index) => {
         addLineDOM(index, line);
@@ -622,9 +675,178 @@ document.getElementById('close-admin-panel-btn').addEventListener('click', () =>
 // Manage global focus
 document.addEventListener('click', (e) => {
     const isModalOpen = document.querySelectorAll('.modal:not(.hidden)').length > 0;
-    if (!isModalOpen && e.target.tagName !== 'BUTTON' && e.target.id !== 'feedback-btn' && e.target.tagName !== 'SELECT' && e.target.id !== 'skip-btn') {
+    const safeElements = ['BUTTON', 'SELECT', 'TEXTAREA', 'INPUT', 'path', 'svg'];
+    const safeIds = ['feedback-btn', 'skip-btn', 'settings-btn', 'search-btn', 'search-input'];
+    
+    const isSafeClick = safeElements.includes(e.target.tagName) || 
+                        safeIds.includes(e.target.id) || 
+                        e.target.closest('.icon-btn') ||
+                        e.target.closest('.option-card') || 
+                        e.target.closest('.type-card') ||
+                        e.target.closest('.theme-card') ||
+                        e.target.closest('.search-result-card');
+    
+    if (!isModalOpen && !isSafeClick) {
         typingInput.focus();
     }
+});
+
+// Modals & Search Management
+const searchBtn = document.getElementById('search-btn');
+const searchModal = document.getElementById('search-modal');
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+const searchEmptyState = document.getElementById('search-empty-state');
+
+function buildSearchIndex() {
+    const allTexts = [
+        ...poemCollections.map(p => ({ ...p, type: 'poem', lang: 'ko' })),
+        ...longCollections.map(l => ({ ...l, type: 'long', lang: 'ko' })),
+        ...englishCollections.map(e => ({ ...e, type: 'poem', lang: 'en' }))
+    ];
+
+    searchResults.innerHTML = allTexts.map((item, idx) => `
+        <div class="search-result-card" data-index="${idx}">
+            <div class="sr-title">${item.title}</div>
+            <div class="sr-author">${item.author}</div>
+            <div class="sr-tags">
+                ${(item.keywords || []).map(k => `<span class="search-tag">${k}</span>`).join('')}
+            </div>
+        </div>
+    `).join('');
+
+    // Add click logic
+    document.querySelectorAll('.search-result-card').forEach((card, idx) => {
+        card.addEventListener('click', () => {
+            const selectedText = allTexts[idx];
+            // Switch internal type and lang just in case
+            currentType = selectedText.type;
+            currentLang = selectedText.lang;
+            // Force UI active state updates for new state
+            if (currentLang === 'ko') {
+                document.getElementById('hangul-btn').classList.add('active');
+                document.getElementById('english-btn').classList.remove('active');
+            } else {
+                document.getElementById('english-btn').classList.add('active');
+                document.getElementById('hangul-btn').classList.remove('active');
+            }
+            
+            searchModal.classList.add('hidden');
+            init(selectedText);
+            typingInput.focus();
+        });
+    });
+}
+
+buildSearchIndex();
+
+searchBtn.addEventListener('click', () => {
+    searchModal.classList.remove('hidden');
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input'));
+    setTimeout(() => searchInput.focus(), 100);
+});
+
+document.getElementById('close-search-modal-btn').addEventListener('click', () => {
+    searchModal.classList.add('hidden');
+});
+
+searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    const cards = document.querySelectorAll('.search-result-card');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+        const title = card.querySelector('.sr-title').innerText.toLowerCase();
+        const author = card.querySelector('.sr-author').innerText.toLowerCase();
+        const tags = Array.from(card.querySelectorAll('.search-tag')).map(t => t.innerText.toLowerCase());
+        
+        const isMatch = title.includes(query) || author.includes(query) || tags.some(t => t.includes(query));
+        
+        if (isMatch) {
+            card.style.display = 'flex';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+
+    searchEmptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+});
+
+document.getElementById('request-poem-btn').addEventListener('click', () => {
+    searchModal.classList.add('hidden');
+    const feedbackText = document.getElementById('feedback-text');
+    feedbackText.value = `[시 추가 요청]\n요청하신 내용: ${searchInput.value}`;
+    document.getElementById('feedback-modal').classList.remove('hidden');
+    setTimeout(() => feedbackText.focus(), 100);
+});
+
+// Modals Management
+const settingsBtn = document.getElementById('settings-btn');
+const settingsModal = document.getElementById('settings-modal');
+
+settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+document.getElementById('close-settings-modal-btn').addEventListener('click', () => settingsModal.classList.add('hidden'));
+
+// Internal Settings Modal Tab Switching
+const settingsTabBtns = document.querySelectorAll('.settings-tab-btn');
+const settingsPanels = document.querySelectorAll('.settings-panel');
+
+settingsTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        // Reset active state on buttons
+        settingsTabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Hide all panels and show target
+        const targetId = btn.getAttribute('data-target');
+        settingsPanels.forEach(panel => {
+            if (panel.id === targetId) {
+                panel.style.display = 'block';
+            } else {
+                panel.style.display = 'none';
+            }
+        });
+    });
+});
+
+// Font Selection Logic
+const fontOptions = document.querySelectorAll('#font-options .option-card');
+fontOptions.forEach(option => {
+    option.addEventListener('click', () => {
+        fontOptions.forEach(o => o.classList.remove('selected'));
+        option.classList.add('selected');
+        currentFont = option.getAttribute('data-font');
+        textDisplay.style.fontFamily = currentFont;
+        // Modal remains open for more settings or could close. Keeping open is nicer for unified settings.
+    });
+});
+
+// Type Selection Logic
+const typeCards = document.querySelectorAll('.type-card');
+typeCards.forEach(card => {
+    card.addEventListener('click', () => {
+        typeCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        const newType = card.getAttribute('data-type');
+        
+        if (currentType !== newType) {
+            currentType = newType;
+            init();
+        }
+    });
+});
+
+// Theme Selection Logic
+const themeCards = document.querySelectorAll('.theme-card');
+themeCards.forEach(card => {
+    card.addEventListener('click', () => {
+        themeCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        currentTheme = card.getAttribute('data-theme');
+        document.documentElement.setAttribute('data-theme', currentTheme);
+    });
 });
 
 document.getElementById('skip-btn').addEventListener('click', () => {
@@ -656,10 +878,7 @@ document.getElementById('english-btn').addEventListener('click', () => {
     }
 });
 
-document.getElementById('font-selector').addEventListener('change', (e) => {
-    document.querySelector('.text-display').style.fontFamily = e.target.value;
-    typingInput.focus();
-});
+// Removed font-selector event listener (moved to modal)
 
 init();
 typingInput.focus();
