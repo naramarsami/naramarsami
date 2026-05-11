@@ -102,8 +102,72 @@ const textCollections = [
             "걸어가야겠다.",
             "오늘 밤에도 별이 바람에 스치운다."
         ]
+    },
+    {
+        title: "초혼",
+        author: "김소월",
+        lines: [
+            "산산이 부서진 이름이여!",
+            "허공 중에 헤어진 이름이여!",
+            "불러도 주인 없는 이름이여!",
+            "부르다가 내가 죽을 이름이여!",
+            "심중에 남아 있는 말 한 마디는",
+            "끝끝내 마저 하지 못하였구나.",
+            "사랑하던 그 사람이여!",
+            "사랑하던 그 사람이여!"
+        ]
+    },
+    {
+        title: "님의 침묵",
+        author: "한용운",
+        lines: [
+            "님은 갔습니다. 아아, 사랑하는 나의 님은 갔습니다.",
+            "푸른 산빛을 깨치고 단풍나무 숲을 향하여 난 작은 길을 걸어서 차마 떨치고 갔습니다.",
+            "황금의 꽃같이 굳고 빛나던 옛 맹세는 차디찬 티끌이 되어서 한숨의 미풍에 날아갔습니다.",
+            "날카로운 첫 키스의 추억은 나의 운명의 지침을 돌려 놓고 뒷걸음쳐서 사라졌습니다."
+        ]
     }
 ];
+
+const englishCollections = [
+    {
+        title: "The Road Not Taken",
+        author: "Robert Frost",
+        lines: [
+            "Two roads diverged in a yellow wood,",
+            "And sorry I could not travel both",
+            "And be one traveler, long I stood",
+            "And looked down one as far as I could",
+            "To where it bent in the undergrowth;"
+        ]
+    },
+    {
+        title: "Daffodils",
+        author: "William Wordsworth",
+        lines: [
+            "I wandered lonely as a cloud",
+            "That floats on high o'er vales and hills,",
+            "When all at once I saw a crowd,",
+            "A host, of golden daffodils;",
+            "Beside the lake, beneath the trees,",
+            "Fluttering and dancing in the breeze."
+        ]
+    },
+    {
+        title: "Ozymandias",
+        author: "Percy Bysshe Shelley",
+        lines: [
+            "I met a traveller from an antique land,",
+            "Who said—“Two vast and trunkless legs of stone",
+            "Stand in the desert. . . . Near them, on the sand,",
+            "Half sunk a shattered visage lies, whose frown,",
+            "And wrinkled lip, and sneer of cold command,",
+            "Tell that its sculptor well those passions read"
+        ]
+    }
+];
+
+let currentLang = 'ko';
 
 const textDisplay = document.getElementById('text-display');
 const typingInput = document.getElementById('typing-input');
@@ -142,7 +206,7 @@ function init() {
     isTransitioning = false;
     startTime = null;
     
-    currentPoem = textCollections[Math.floor(Math.random() * textCollections.length)];
+    currentPoem = currentLang === 'ko' ? textCollections[Math.floor(Math.random() * textCollections.length)] : englishCollections[Math.floor(Math.random() * englishCollections.length)];
     poemTitle.innerText = currentPoem.title;
     poemAuthor.innerText = currentPoem.author;
     
@@ -222,6 +286,28 @@ function updateActiveCharacter() {
 typingInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         e.preventDefault();
+    }
+    if (e.key === 'Backspace' && typingInput.value === '' && currentLineIdx > 0) {
+        e.preventDefault();
+        currentLineIdx--;
+        const fullPrevText = linesData[currentLineIdx].text;
+        const prevText = fullPrevText.slice(0, -1);
+        
+        totalTyped -= fullPrevText.length;
+        if (currentLang === 'ko') {
+            totalStrokes -= getHangulStrokes(fullPrevText);
+        } else {
+            totalStrokes -= fullPrevText.length;
+        }
+        
+        const lines = textDisplay.querySelectorAll('.sentence-line');
+        lines.forEach(l => l.classList.remove('active-line'));
+        const activeLineDiv = document.getElementById(`line-${currentLineIdx}`);
+        if (activeLineDiv) activeLineDiv.classList.add('active-line');
+        
+        typingInput.value = prevText;
+        previousInputLength = fullPrevText.length;
+        typingInput.dispatchEvent(new Event('input'));
     }
 });
 
@@ -330,7 +416,7 @@ function updateWPM() {
         if (minutes > 0) {
             // 한컴타자연습 기준: 글자수(단어)가 아닌 1분당 실제 친 자모음 개수(Strokes) 계산!
             const currentLineText = linesData[currentLineIdx] ? linesData[currentLineIdx].text.substring(0, typingInput.value.length) : "";
-            const currentStrokes = getHangulStrokes(currentLineText);
+            const currentStrokes = currentLang === 'ko' ? getHangulStrokes(currentLineText) : currentLineText.length;
             
             const wpm = Math.round((totalStrokes + currentStrokes) / minutes);
             wpmDisplay.innerText = wpm > 0 && wpm < 2500 ? wpm : 0;
@@ -536,9 +622,43 @@ document.getElementById('close-admin-panel-btn').addEventListener('click', () =>
 // Manage global focus
 document.addEventListener('click', (e) => {
     const isModalOpen = document.querySelectorAll('.modal:not(.hidden)').length > 0;
-    if (!isModalOpen && e.target.tagName !== 'BUTTON' && e.target.id !== 'feedback-btn') {
+    if (!isModalOpen && e.target.tagName !== 'BUTTON' && e.target.id !== 'feedback-btn' && e.target.tagName !== 'SELECT' && e.target.id !== 'skip-btn') {
         typingInput.focus();
     }
+});
+
+document.getElementById('skip-btn').addEventListener('click', () => {
+    init();
+    typingInput.focus();
+});
+
+document.getElementById('hangul-btn').addEventListener('click', () => {
+    if (currentLang !== 'ko') {
+        currentLang = 'ko';
+        document.getElementById('hangul-btn').classList.add('active');
+        document.getElementById('hangul-btn').style.color = '';
+        document.getElementById('english-btn').classList.remove('active');
+        document.getElementById('english-btn').style.color = 'var(--text-secondary)';
+        init();
+        typingInput.focus();
+    }
+});
+
+document.getElementById('english-btn').addEventListener('click', () => {
+    if (currentLang !== 'en') {
+        currentLang = 'en';
+        document.getElementById('english-btn').classList.add('active');
+        document.getElementById('english-btn').style.color = '';
+        document.getElementById('hangul-btn').classList.remove('active');
+        document.getElementById('hangul-btn').style.color = 'var(--text-secondary)';
+        init();
+        typingInput.focus();
+    }
+});
+
+document.getElementById('font-selector').addEventListener('change', (e) => {
+    document.querySelector('.text-display').style.fontFamily = e.target.value;
+    typingInput.focus();
 });
 
 init();
