@@ -416,7 +416,12 @@ typingInput.addEventListener('input', (e) => {
     accDisplay.innerText = `${Math.max(0, acc)}%`;
     
     // Auto-Enter Logic with IME Blur Bug Fix
-    if (inputVal.length >= characters.length) {
+    const isLengthReached = inputVal.length >= characters.length;
+    const targetLastChar = characters[characters.length - 1];
+    const typedLastChar = inputVal[characters.length - 1];
+    
+    // 마지막 글자가 목표 글자와 일치할 때만 자동 엔터 진행
+    if (isLengthReached && typedLastChar === targetLastChar) {
         totalTyped += characters.length;
         totalStrokes += getHangulStrokes(linesData[currentLineIdx].text); 
         currentLineIdx++;
@@ -514,11 +519,30 @@ nextBtn.addEventListener('click', () => {
 });
 
 document.getElementById('share-btn').addEventListener('click', () => {
-    const text = `나랏말싸미 📜\n[${currentPoem.title}] 타수: ${modalWpm.innerText} | 정확도: ${modalAcc.innerText}\n#나랏말싸미 #한글타자`;
-    navigator.clipboard.writeText(text).then(() => {
-        alert('기록이 클립보드에 복사되었습니다! SNS에 자랑해보세요.');
-    });
+    const shareText = `나랏말싸미 📜\n\n📖 작품: ${currentPoem.title}\n⚡ 타수: ${modalWpm.innerText} WPM\n🎯 정확도: ${modalAcc.innerText}\n\n#나랏말싸미 #타자연습 #typing`;
+    
+    // Web Share API가 지원될 경우 (모바일 및 최신 브라우저의 네이티브 공유 기능 실행)
+    if (navigator.share) {
+        navigator.share({
+            title: '나랏말싸미 타자 기록',
+            text: shareText,
+            url: window.location.href
+        }).catch((error) => {
+            console.log('Share failed:', error);
+            fallbackCopy(shareText);
+        });
+    } else {
+        fallbackCopy(shareText);
+    }
 });
+
+function fallbackCopy(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('기록이 클립보드에 복사되었습니다!\n원하는 SNS(카톡, 인스타, 디코 등) 채팅창에 붙여넣어 보세요! ✨');
+    }).catch(err => {
+        alert('클립보드 복사에 실패했습니다. 수동으로 공유해 주세요.');
+    });
+}
 
 document.getElementById('ranking-btn').addEventListener('click', () => {
     const rankingList = document.getElementById('ranking-list');
