@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title>나랏말싸미 - 한글 타자 연습</title>
     
     <!-- SEO & 검색 최적화 -->
@@ -19,19 +19,18 @@
     <meta property="og:url" content="https://naramarsami.github.io/naramarsami/">
     <meta property="og:site_name" content="나랏말싸미">
     
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=9">
 </head>
-<!-- 보안: 우클릭, 블록지정, 드래그 복사 원천 차단 -->
-<body oncontextmenu="return false" onselectstart="return false" ondragstart="return false">
+<body>
     <div class="wrapper">
         <header>
             <h1 class="sr-only">나랏말싸미 - 한글 타자 연습</h1>
             <div class="logo">나랏말싸미</div>
             <nav class="nav-links" aria-label="메인 메뉴">
                 <div class="lang-selector">
-                    <span class="active" id="hangul-btn">한글</span>
-                    <span class="nav-divider">/</span>
-                    <span id="english-btn">English</span>
+                    <button type="button" class="active" id="hangul-btn" data-language="ko" aria-pressed="true">한글</button>
+                    <span class="nav-divider" aria-hidden="true">/</span>
+                    <button type="button" id="english-btn" data-language="en" aria-pressed="false">English</button>
                 </div>
                 <div class="nav-controls">
                     <button id="search-btn" class="icon-btn" aria-label="글 검색">
@@ -40,7 +39,7 @@
                     <button id="skip-btn" class="icon-btn" aria-label="새 글 (새로고침)">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                     </button>
-                    <button id="feedback-btn" class="icon-btn" aria-label="의견">
+                    <button id="help-btn" class="icon-btn" aria-label="연습 도움말">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                     </button>
                     <button id="settings-btn" class="icon-btn" aria-label="설정">
@@ -64,8 +63,12 @@
                     </div>
                 </section>
                 
-                <!-- 숨겨진 실제 입력창 -->
-                <input type="text" id="typing-input" autocomplete="off" spellcheck="false" autofocus aria-label="타자 입력창">
+                <p id="line-instruction" class="sr-only" aria-live="polite"></p>
+                <input type="text" id="typing-input" inputmode="text" autocomplete="off" autocorrect="off"
+                    autocapitalize="off" spellcheck="false" enterkeyhint="done"
+                    aria-label="타자 입력창" aria-describedby="line-instruction practice-hint"
+                    placeholder="위 문장을 입력하세요">
+                <p id="practice-hint" class="sr-only">한 줄을 정확하게 입력하면 다음 줄로 이어져요.</p>
             </article>
         </main>
 
@@ -73,7 +76,7 @@
 
             <section class="stats" aria-label="현재 타자 통계">
                 <div class="stat">
-                    <span class="label">타수</span>
+                    <span class="label" id="speed-label" title="한글은 두벌식 기준 분당 환산 타수">타수</span>
                     <span class="value" id="wpm">0</span>
                 </div>
                 <div class="stat">
@@ -81,20 +84,23 @@
                     <span class="value" id="accuracy">100%</span>
                 </div>
             </section>
+            <nav class="footer-links" aria-label="사이트 안내">
+                <a href="./about.html">소개</a>
+                <a href="./brand.html">브랜드 가이드</a>
+                <button id="history-btn" type="button">내 기록</button>
+            </nav>
         </footer>
     </div>
 
     <!-- Result Modal -->
-    <div id="result-modal" class="modal hidden" role="dialog" aria-labelledby="modal-title">
+    <dialog id="result-modal" class="modal" aria-labelledby="modal-title">
         <div class="modal-content">
             <h2 class="modal-title" id="modal-title">작성 완료</h2>
-            <div class="modal-poem-info">
-                <span id="modal-poem-title"></span> - <span id="modal-poem-author"></span>
-            </div>
+            <p id="result-work" class="modal-poem-info"></p>
             
             <div class="modal-stats">
                 <div class="modal-stat">
-                    <span class="label">최종 타수</span>
+                    <span class="label" id="result-speed-label">최종 타수</span>
                     <span class="value" id="modal-wpm">0</span>
                 </div>
                 <div class="modal-stat">
@@ -102,77 +108,64 @@
                     <span class="value" id="modal-acc">100%</span>
                 </div>
                 <div class="modal-stat">
-                    <span class="label">오타율</span>
-                    <span class="value" id="modal-errors">0%</span>
+                    <span class="label">오타 횟수</span>
+                    <span class="value" id="modal-errors">0</span>
                 </div>
             </div>
             
+            <p id="result-time" class="dialog-note"></p>
             <div class="modal-actions">
                 <button id="share-btn" class="secondary" title="현재 기록을 복사합니다">기록 공유</button>
-                <button id="ranking-btn" class="secondary" title="내 최고 기록을 확인합니다">나의 기록</button>
+                <button id="ranking-btn" class="secondary">나의 기록</button>
+                <button id="retry-btn" class="secondary">같은 작품 다시</button>
                 <button id="next-btn" title="다음 작품을 연습합니다">다음 글로</button>
             </div>
+            <p id="result-status" role="status" class="dialog-note"></p>
+            <form method="dialog"><button class="dialog-close" type="submit">닫기</button></form>
         </div>
-    </div>
+    </dialog>
 
     <!-- Ranking Modal -->
-    <div id="ranking-modal" class="modal hidden" role="dialog">
+    <dialog id="ranking-modal" class="modal" aria-labelledby="history-title">
         <div class="modal-content">
-            <h2 class="modal-title">나의 타자 기록</h2>
-            <div class="ranking-list" id="ranking-list">
+            <h2 class="modal-title" id="history-title">나의 타자 기록</h2>
+            <label class="dialog-filter" for="history-filter">기록 범위
+                <select id="history-filter">
+                    <option value="all">모든 기록</option>
+                    <option value="work">이 작품</option>
+                    <option value="ko">한글</option>
+                    <option value="en">영어</option>
+                    <option value="legacy">이전 방식의 기록</option>
+                </select>
+            </label>
+            <ul class="ranking-list" id="ranking-list">
                 <!-- Records injected here -->
-            </div>
-            <button id="close-ranking-btn" class="secondary" style="margin-top: 2rem;">닫기</button>
+            </ul>
+            <form method="dialog"><button id="close-ranking-btn" class="secondary" type="submit">닫기</button></form>
         </div>
-    </div>
+    </dialog>
 
     <!-- Feedback Modal -->
-    <div id="feedback-modal" class="modal hidden" role="dialog">
+    <dialog id="help-modal" class="modal" aria-labelledby="help-title">
         <div class="modal-content">
-            <h2 class="modal-title">의견 남기기</h2>
-            <p class="modal-poem-info" style="margin-bottom: 1.5rem;">버그 제보나 추가되었으면 하는 시를 알려주세요!</p>
-            <textarea id="feedback-text" placeholder="여기에 의견을 자유롭게 적어주세요..." rows="5"></textarea>
-            <div class="modal-actions" style="margin-top: 1.5rem;">
-                <button id="close-feedback-btn" class="secondary">취소</button>
-                <button id="submit-feedback-btn">보내기</button>
-            </div>
+            <h2 class="modal-title" id="help-title">연습 도움말</h2>
+            <p class="modal-poem-info" id="help-typing-hint">한 줄을 정확하게 입력하면 다음 줄로 이어져요.</p>
+            <p class="dialog-note">한글 타수는 맞게 입력한 자소를, 영어 타수는 맞게 입력한 글자를 작품 전체의 연습 시간으로 나눠 분당 수치로 표시해요.</p>
+            <p class="dialog-note">최근 연습 기록과 설정은 이 브라우저에 저장돼요.</p>
+            <form method="dialog"><button class="dialog-close" type="submit">닫기</button></form>
         </div>
-    </div>
-
-    <!-- Admin Login Modal -->
-    <div id="admin-login-modal" class="modal hidden" role="dialog">
-        <div class="modal-content">
-            <h2 class="modal-title">관리자 접속</h2>
-            <p class="modal-poem-info" style="margin-bottom: 1.5rem;">비밀번호를 입력하세요.</p>
-            <input type="password" id="admin-password" class="auth-input" placeholder="비밀번호" autocomplete="off">
-            <div class="modal-actions" style="margin-top: 1.5rem;">
-                <button id="close-admin-login-btn" class="secondary">취소</button>
-                <button id="submit-admin-login-btn">접속</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Admin Panel Modal -->
-    <div id="admin-panel-modal" class="modal hidden" role="dialog">
-        <div class="modal-content" style="min-width: 600px;">
-            <h2 class="modal-title">사용자 의견함</h2>
-            <div class="ranking-list" id="admin-feedback-list">
-                <!-- Feedbacks injected here -->
-            </div>
-            <button id="close-admin-panel-btn" class="secondary" style="margin-top: 2rem;">닫기</button>
-        </div>
-    </div>
+    </dialog>
 
     <!-- Unified Settings Modal -->
-    <div id="settings-modal" class="modal hidden" role="dialog">
+    <dialog id="settings-modal" class="modal" aria-labelledby="settings-title">
         <div class="modal-content settings-content">
-            <h2 class="modal-title">설정</h2>
+            <h2 class="modal-title" id="settings-title">설정</h2>
             <p class="modal-poem-info" style="margin-bottom: 1.5rem;">자신만의 작업 환경을 꾸며보세요.</p>
             
             <div class="settings-tabs">
-                <button class="settings-tab-btn active" data-target="panel-type">글 종류</button>
-                <button class="settings-tab-btn" data-target="panel-font">글꼴 설정</button>
-                <button class="settings-tab-btn" data-target="panel-theme">테마 & 색상</button>
+                <button class="settings-tab-btn active" data-target="panel-type" aria-pressed="true">글 종류</button>
+                <button class="settings-tab-btn" data-target="panel-font" aria-pressed="false">글꼴 설정</button>
+                <button class="settings-tab-btn" data-target="panel-theme" aria-pressed="false">테마 & 색상</button>
             </div>
             
             <div class="settings-panels">
@@ -180,14 +173,8 @@
                 <div class="settings-panel active" id="panel-type">
                     <h3 class="section-title sr-only">글 종류</h3>
                     <div class="type-flex">
-                        <div class="type-card selected" data-type="poem" id="type-card-poem">
-                            <h3>시 (Poem)</h3>
-                            <div class="type-preview" style="font-size: 1rem;">나 보기가 역겨워 가실 때에는<br>말없이 고이 보내 드리오리다.</div>
-                        </div>
-                        <div class="type-card" data-type="long" id="type-card-long">
-                            <h3>긴 글 (Long Text)</h3>
-                            <div class="type-preview" style="font-size: 1rem;">여름장이란 애시당초에 글러서, 해는 아직 중천에 있건만 장판은 벌써 쓸쓸하고...</div>
-                        </div>
+                        <button type="button" class="type-card selected" data-mode="poem" aria-pressed="true"><span class="type-title">시 (Poem)</span><span class="type-preview" style="font-size: 1rem;">나 보기가 역겨워 가실 때에는<br>말없이 고이 보내 드리오리다.</span></button>
+                        <button type="button" class="type-card" data-mode="long" aria-pressed="false"><span class="type-title">긴 글 (Long Text)</span><span class="type-preview" style="font-size: 1rem;">여름장이란 애시당초에 글러서, 해는 아직 중천에 있건만 장판은 벌써 쓸쓸하고...</span></button>
                     </div>
                 </div>
 
@@ -195,15 +182,15 @@
                 <div class="settings-panel" id="panel-font" style="display: none;">
                     <h3 class="section-title sr-only">글꼴</h3>
                     <div class="options-grid" id="font-options">
-                        <div class="option-card selected" data-font="'Pretendard', sans-serif" style="font-family: 'Pretendard', sans-serif;">Pretendard</div>
-                        <div class="option-card" data-font="'Gungsuh', '궁서', serif" style="font-family: '궁서', serif;">궁서체</div>
-                        <div class="option-card" data-font="'Noto Serif KR', serif" style="font-family: 'Noto Serif KR', serif;">Noto Serif</div>
-                        <div class="option-card" data-font="'Nanum Myeongjo', serif" style="font-family: 'Nanum Myeongjo', serif;">나눔명조</div>
-                        <div class="option-card" data-font="'Nanum Gothic', sans-serif" style="font-family: 'Nanum Gothic', sans-serif;">나눔고딕</div>
-                        <div class="option-card" data-font="'Gowun Batang', serif" style="font-family: 'Gowun Batang', serif;">고운바탕</div>
-                        <div class="option-card" data-font="'Gamja Flower', cursive" style="font-family: 'Gamja Flower', cursive;">감자꽃</div>
-                        <div class="option-card" data-font="'Single Day', cursive" style="font-family: 'Single Day', cursive;">싱글데이</div>
-                        <div class="option-card" data-font="'JetBrains Mono', monospace" style="font-family: 'JetBrains Mono', monospace;">JetBrains</div>
+                        <button type="button" class="option-card selected" data-font-choice="pretendard">Pretendard</button>
+                        <button type="button" class="option-card" data-font-choice="gungsuh">궁서체</button>
+                        <button type="button" class="option-card" data-font-choice="serif">Noto Serif</button>
+                        <button type="button" class="option-card" data-font-choice="myeongjo">나눔명조</button>
+                        <button type="button" class="option-card" data-font-choice="gothic">나눔고딕</button>
+                        <button type="button" class="option-card" data-font-choice="batang">고운바탕</button>
+                        <button type="button" class="option-card" data-font-choice="gamja">감자꽃</button>
+                        <button type="button" class="option-card" data-font-choice="single">싱글데이</button>
+                        <button type="button" class="option-card" data-font-choice="mono">JetBrains</button>
                     </div>
                 </div>
 
@@ -211,52 +198,43 @@
                 <div class="settings-panel" id="panel-theme" style="display: none;">
                     <h3 class="section-title sr-only">테마</h3>
                     <div class="theme-options">
-                        <div class="theme-card selected" data-theme="light">
-                            <div class="theme-swatch" style="background:#ffffff; border: 1px solid #ddd;"></div>
-                            <span>라이트</span>
-                        </div>
-                        <div class="theme-card" data-theme="dark">
-                            <div class="theme-swatch" style="background:#0c0c0c;"></div>
-                            <span>디프 다크</span>
-                        </div>
-                        <div class="theme-card" data-theme="sepia">
-                            <div class="theme-swatch" style="background:#f4ecd8;"></div>
-                            <span>세피아</span>
-                        </div>
-                        <div class="theme-card" data-theme="ocean">
-                            <div class="theme-swatch" style="background:#e8f4f8;"></div>
-                            <span>미드나잇 오션</span>
-                        </div>
+                        <button type="button" class="theme-card selected" data-theme-choice="light"><span class="theme-swatch" style="background:#ffffff; border: 1px solid #ddd;"></span><span>라이트</span></button>
+                        <button type="button" class="theme-card" data-theme-choice="dark"><span class="theme-swatch" style="background:#0c0c0c;"></span><span>디프 다크</span></button>
+                        <button type="button" class="theme-card" data-theme-choice="sepia"><span class="theme-swatch" style="background:#f4ecd8;"></span><span>세피아</span></button>
+                        <button type="button" class="theme-card" data-theme-choice="ocean"><span class="theme-swatch" style="background:#e8f4f8;"></span><span>미드나잇 오션</span></button>
                     </div>
                 </div>
             </div>
 
-            <button id="close-settings-modal-btn" style="margin-top: 1.5rem; width: 100%;" class="secondary">완료</button>
+            <form method="dialog"><button id="close-settings-modal-btn" class="secondary" type="submit">완료</button></form>
         </div>
-    </div>
+    </dialog>
 
     <!-- Search Modal -->
-    <div id="search-modal" class="modal hidden" role="dialog">
+    <dialog id="search-modal" class="modal" aria-labelledby="search-title">
         <div class="modal-content search-modal-content">
+            <h2 class="sr-only" id="search-title">작품 찾기</h2>
             <div class="search-header">
                 <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" id="search-input" placeholder="제목, 작가, 또는 키워드(사랑, 별 등) 검색..." autocomplete="off">
+                <input type="search" aria-label="제목, 작가 또는 키워드" id="search-input" placeholder="제목, 작가, 또는 키워드(사랑, 별 등) 검색..." autocomplete="off">
             </div>
+            <label class="dialog-filter" for="search-filter">작품 종류
+                <select id="search-filter">
+                    <option value="all">전체</option><option value="poem">한글 시</option>
+                    <option value="long">긴 글</option><option value="en">영어</option>
+                </select>
+            </label>
+            <p id="search-status" role="status" class="dialog-note"></p>
             <div class="search-results-container">
                 <div id="search-results" class="search-results-grid">
                     <!-- Dynamically generated searchable results go here -->
                 </div>
-                <div id="search-empty-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 0; text-align: center;">
-                    <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 1.2rem; font-weight: 600;">원하는 글을 찾을 수 없습니다.</p>
-                    <button id="request-poem-btn" style="background: transparent; border: 2px solid var(--accent-color); color: var(--accent-color); border-radius: 12px; font-weight: 800;">의견에 시 추가 요청하기</button>
-                </div>
+                <button id="clear-search-btn" class="secondary" type="button" hidden>검색 초기화</button>
             </div>
-            <button id="close-search-modal-btn" class="secondary" style="margin-top: 1.5rem; border: none; background: none; color: var(--text-secondary); font-weight: 700; cursor: pointer;">닫기</button>
+            <form method="dialog"><button id="close-search-modal-btn" class="dialog-close" type="submit">닫기</button></form>
         </div>
-    </div>
+    </dialog>
 
-    <!-- Supabase SDK (파이어베이스 대체재) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js?v=2"></script>
+    <script type="module" src="script.js?v=9"></script>
 </body>
 </html>

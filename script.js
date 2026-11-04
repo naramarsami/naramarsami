@@ -1,37 +1,5 @@
-// 보안: 키보드 단축키(복사, 저장, 소스보기, 개발자도구 등) 전면 차단
-document.addEventListener('keydown', (e) => {
-    const cmdOrCtrl = e.metaKey || e.ctrlKey;
-    
-    if (e.key === 'F12') {
-        e.preventDefault();
-        return false;
-    }
-    
-    if (cmdOrCtrl) {
-        const key = e.key.toLowerCase();
-        // S(저장), U(소스보기), P(인쇄), C(복사), X(잘라내기)
-        if (key === 's' || key === 'u' || key === 'p' || key === 'c' || key === 'x') {
-            e.preventDefault();
-            return false;
-        }
-        
-        // Ctrl+Shift+I, J, C (개발자 도구)
-        if (e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) {
-            e.preventDefault();
-            return false;
-        }
-    }
-});
-
-const SUPABASE_URL = "https://cohakvagndxqrptbbydg.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvaGFrdmFnbmR4cXJwdGJieWRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNjI2ODksImV4cCI6MjA4OTczODY4OX0.6xiGPUnj9IWVtZu_IMAtkROk7aU5DSeBSJfYn-6FcW8";
-
-let supabaseClient = null;
-try {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} catch (e) {
-    console.warn("Supabase 초기화 에러 (로컬 모드로 작동):", e);
-}
+import { bindTyping, characters, readInput, isAutomatic, isLineComplete, commitInput, scorePractice } from './typing-core.mjs?v=9';
+import { applyTypeface, initialFont, readCookie, readLegacy, savedSettings, settings } from './settings.mjs?v=9';
 
 const poemCollections = [
     {
@@ -203,719 +171,532 @@ const englishCollections = [
     }
 ];
 
-let currentLang = 'ko';
-let currentType = 'poem'; // default: poem
-let currentFont = "'Pretendard', sans-serif"; // default: Pretendard
-let currentTheme = 'light';
+const byId = id => document.getElementById(id);
+const typingInput = byId('typing-input');
+const textDisplay = byId('text-display');
+const passage = textDisplay.parentElement;
+const resultDialog = byId('result-modal');
+const searchDialog = byId('search-modal');
+const historyDialog = byId('ranking-modal');
+const helpDialog = byId('help-modal');
+const settingsDialog = byId('settings-modal');
+const desktopTyping = matchMedia('(min-width: 769px) and (pointer: fine)');
+const mobileTyping = matchMedia('(max-width: 768px), (pointer: coarse)');
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
-const textDisplay = document.getElementById('text-display');
-const typingInput = document.getElementById('typing-input');
-const wpmDisplay = document.getElementById('wpm');
-const accDisplay = document.getElementById('accuracy');
+const collections = { poem: poemCollections, long: longCollections, en: englishCollections };
+const modeLabels = { poem: '한글 시', long: '긴 글', en: '영어' };
+let mode = 'poem';
+let koreanMode = 'poem';
+let work;
+let lines = [];
+let lineIndex = 0;
+let composing = false;
+let startedAt = null;
+let clock = null;
+let result = null;
+let alignFrame = null;
+let caretIndex = 0;
+let animateNextLine = false;
+let lineMotion;
+let autoSpace = mobileTyping.matches;
 
-const poemTitle = document.getElementById('poem-title');
-const poemAuthor = document.getElementById('poem-author');
-const modal = document.getElementById('result-modal');
-const modalWpm = document.getElementById('modal-wpm');
-const modalAcc = document.getElementById('modal-acc');
-const modalErrors = document.getElementById('modal-errors');
-const modalPoemTitle = document.getElementById('modal-poem-title');
-const modalPoemAuthor = document.getElementById('modal-poem-author');
-const nextBtn = document.getElementById('next-btn');
-
-let currentPoem = null;
-let linesData = [];
-let currentLineIdx = 0;
-let currentIndex = 0;
-let totalTyped = 0;
-let totalStrokes = 0;
-let startTime = null;
-let cumulativeErrors = 0;
-let previousInputLength = 0;
-let isTransitioning = false;
-
-function init(chosenPoem = null) {
-    textDisplay.innerHTML = '';
-    linesData = [];
-    currentLineIdx = 0;
-    totalTyped = 0;
-    totalStrokes = 0;
-    cumulativeErrors = 0;
-    previousInputLength = 0;
-    isTransitioning = false;
-    startTime = null;
-    
-    if (chosenPoem) {
-        currentPoem = chosenPoem;
-    } else {
-        let pool = [];
-        if (currentLang === 'ko') {
-            pool = currentType === 'poem' ? poemCollections : longCollections;
-        } else {
-            pool = englishCollections;
-        }
-        currentPoem = pool[Math.floor(Math.random() * pool.length)];
+function writeCookie(key, value) {
+    try {
+        const encoded = encodeURIComponent(JSON.stringify(value));
+        if (encoded.length > 3500) return false;
+        const directory = location.pathname.slice(0, location.pathname.lastIndexOf('/') + 1);
+        const secure = location.protocol === 'https:' ? '; Secure' : '';
+        const entry = 'narat-' + key + '=' + encoded;
+        document.cookie = entry + '; Path=' + directory + '; Max-Age=31536000; SameSite=Lax' + secure;
+        return document.cookie.split('; ').includes(entry);
+    } catch {
+        return false;
     }
-    
-    poemTitle.innerText = currentPoem.title;
-    poemAuthor.innerText = currentPoem.author;
-    
-    // 폰트 적용
-    textDisplay.style.fontFamily = currentFont;
-    
-    currentPoem.lines.forEach((line, index) => {
-        addLineDOM(index, line);
+}
+
+function focusTyping() {
+    typingInput.focus({ preventScroll: desktopTyping.matches });
+}
+
+function show(dialog, focus, resumeTyping = false) {
+    if (resumeTyping) dialog.addEventListener('close', () => {
+        if (desktopTyping.matches && !result && !document.querySelector('dialog[open]')) focusTyping();
+    }, { once: true });
+    dialog.showModal();
+    focus?.focus();
+}
+
+function language() {
+    return mode === 'en' ? 'en' : 'ko';
+}
+
+function speedLabel(lang) {
+    return lang === 'en' ? '분당 글자' : '타수';
+}
+
+function stopClock() {
+    clearInterval(clock);
+    clock = null;
+}
+
+function elapsed() {
+    return startedAt === null ? 0 : performance.now() - startedAt;
+}
+
+function refreshStats() {
+    const duration = elapsed();
+    const score = result ?? scorePractice(lines, language(), duration);
+    const speed = String(result || duration >= 1000 ? score.speed : 0);
+    const accuracy = score.accuracy + '%';
+    if (byId('wpm').textContent !== speed) byId('wpm').textContent = speed;
+    if (byId('accuracy').textContent !== accuracy) byId('accuracy').textContent = accuracy;
+}
+
+function startClock() {
+    if (startedAt !== null) return;
+    startedAt = performance.now();
+    clock = setInterval(refreshStats, 250);
+}
+
+function pickWork() {
+    const pool = collections[mode];
+    const available = pool.filter(item => item !== work);
+    const choices = available.length ? available : pool;
+    return choices[Math.floor(Math.random() * choices.length)];
+}
+
+function startPractice(selectedWork = pickWork(), focus = false) {
+    stopClock();
+    startedAt = null;
+    result = null;
+    composing = false;
+    animateNextLine = false;
+    lineMotion?.cancel();
+    resetInput();
+    lineIndex = 0;
+    work = selectedWork;
+    autoSpace = mobileTyping.matches;
+    const spacingHint = autoSpace ? '띄어쓰기와 문장부호는 자동으로 넣어요.' : '띄어쓰기는 직접 하고, 문장부호는 자동으로 넣어요.';
+    const practiceHint = spacingHint + ' 한 줄을 끝까지 정확하게 입력하면 자동으로 다음 줄로 넘어가요.';
+    byId('practice-hint').textContent = practiceHint;
+    byId('help-typing-hint').textContent = practiceHint;
+    lines = work.lines.map(source => {
+        const text = source.normalize('NFC');
+        return { text, reference: Array.from(text), target: characters(text, autoSpace), input: [], attempts: 0, errors: 0 };
+    }).filter(line => line.target.length);
+    document.querySelectorAll('[data-language]').forEach(button => {
+        const active = button.dataset.language === language();
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
     });
-    
-    accDisplay.innerText = '100%';
-    wpmDisplay.innerText = '0';
-    
-    setupActiveLine();
-}
-
-function addLineDOM(index, text) {
-    linesData[index] = { text: text, characters: text.split('') };
-    
-    const lineDiv = document.createElement('div');
-    lineDiv.className = 'sentence-line';
-    lineDiv.id = `line-${index}`;
-    
-    let currentWordSpan = document.createElement('span');
-    currentWordSpan.className = 'word';
-    lineDiv.appendChild(currentWordSpan);
-    
-    linesData[index].characters.forEach((char, i) => {
-        const span = document.createElement('span');
-        span.textContent = char;
-        span.id = `char-${index}-${i}`;
-        currentWordSpan.appendChild(span);
-        
-        if (char === ' ') {
-            currentWordSpan = document.createElement('span');
-            currentWordSpan.className = 'word';
-            lineDiv.appendChild(currentWordSpan);
-        }
+    document.querySelectorAll('[data-mode]').forEach(button => {
+        const active = button.dataset.mode === koreanMode;
+        button.classList.toggle('selected', active);
+        button.setAttribute('aria-pressed', String(active));
     });
-    
-    const endSpan = document.createElement('span');
-    endSpan.innerHTML = '&nbsp;';
-    endSpan.id = `char-${index}-${text.length}`;
-    currentWordSpan.appendChild(endSpan);
-    
-    textDisplay.appendChild(lineDiv);
+    byId('poem-title').textContent = work.title;
+    byId('poem-author').textContent = work.author;
+    byId('speed-label').textContent = language() === 'en' ? '분당 글자' : '타수';
+    byId('speed-label').title = language() === 'en' ? '맞게 입력한 분당 글자 수' : '맞게 입력한 분당 한글 자소 수';
+    typingInput.lang = language();
+    typingInput.readOnly = false;
+    renderWork();
+    displayLine();
+    refreshStats();
+    if (focus) focusTyping();
 }
 
-function setupActiveLine() {
-    const lines = textDisplay.querySelectorAll('.sentence-line');
-    lines.forEach(l => l.classList.remove('active-line'));
-    
-    const activeLineDiv = document.getElementById(`line-${currentLineIdx}`);
-    if (activeLineDiv) {
-        activeLineDiv.classList.add('active-line');
-    }
-    
-    currentIndex = 0;
-    typingInput.value = '';
-    previousInputLength = 0;
-    
-    updateActiveCharacter();
-}
-
-function updateActiveCharacter() {
-    const activeLineDiv = document.getElementById(`line-${currentLineIdx}`);
-    if (!activeLineDiv) return;
-    
-    const spans = activeLineDiv.querySelectorAll('span:not(.word)');
-    spans.forEach(span => span.classList.remove('active'));
-    
-    if (currentIndex < spans.length) {
-        spans[currentIndex].classList.add('active');
-    }
-    
-    const lineOffsetTop = activeLineDiv.offsetTop;
-    textDisplay.style.transform = `translateY(-${lineOffsetTop}px)`;
-}
-
-typingInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        // 수동 엔터 허용: 오타가 있더라도 사용자가 강제로 다음 줄로 넘어가고 싶을 때 허용!
-        if (!isTransitioning) {
-            moveToNextLine();
-        }
-    }
-    if (e.key === 'Backspace' && typingInput.value === '' && currentLineIdx > 0) {
-        e.preventDefault();
-        currentLineIdx--;
-        const fullPrevText = linesData[currentLineIdx].text;
-        const prevText = fullPrevText.slice(0, -1);
-        
-        totalTyped -= fullPrevText.length;
-        if (currentLang === 'ko') {
-            totalStrokes -= getHangulStrokes(fullPrevText);
-        } else {
-            totalStrokes -= fullPrevText.length;
-        }
-        
-        const lines = textDisplay.querySelectorAll('.sentence-line');
-        lines.forEach(l => l.classList.remove('active-line'));
-        const activeLineDiv = document.getElementById(`line-${currentLineIdx}`);
-        if (activeLineDiv) activeLineDiv.classList.add('active-line');
-        
-        typingInput.value = prevText;
-        previousInputLength = fullPrevText.length;
-        typingInput.dispatchEvent(new Event('input'));
-    }
-});
-
-typingInput.addEventListener('input', (e) => {
-    if (isTransitioning) return;
-    if (!startTime) startTime = new Date().getTime();
-    
-    const inputVal = typingInput.value;
-    const activeLineDiv = document.getElementById(`line-${currentLineIdx}`);
-    if (!activeLineDiv) return;
-    
-    const spans = activeLineDiv.querySelectorAll('span:not(.word)');
-    const characters = linesData[currentLineIdx].characters;
-    
-    if (inputVal.length > previousInputLength) {
-        const lastCharIdx = inputVal.length - 1;
-        if (lastCharIdx < characters.length) {
-            if (inputVal[lastCharIdx] !== characters[lastCharIdx]) {
-                cumulativeErrors++;
-            }
-        } else {
-            cumulativeErrors++;
-        }
-    }
-    previousInputLength = inputVal.length;
-    
-    let allCorrect = true;
-    
-    spans.forEach((span, i) => {
-        span.classList.remove('correct', 'incorrect');
-        
-        if (i < inputVal.length && i < characters.length) {
-            span.textContent = inputVal[i]; 
-            
-            if (inputVal[i] === characters[i]) {
-                span.classList.add('correct');
+function renderWork() {
+    for (const line of lines) {
+        const paragraph = document.createElement('div');
+        paragraph.className = 'sentence-line';
+        paragraph.lang = language();
+        line.spans = [];
+        let word = document.createElement('span');
+        word.className = 'word';
+        paragraph.append(word);
+        for (const char of line.reference) {
+            if (isAutomatic(char, autoSpace)) {
+                word.append(char);
             } else {
-                span.classList.add('incorrect');
-                allCorrect = false;
+                const span = document.createElement('span');
+                span.textContent = char;
+                word.append(span);
+                line.spans.push(span);
             }
-        } else if (i < characters.length) {
-            span.textContent = characters[i]; 
+            if (/\s/u.test(char)) {
+                word = document.createElement('span');
+                word.className = 'word';
+                paragraph.append(word);
+            }
         }
-    });
-    
-    currentIndex = inputVal.length;
-    
-    let totalAttempts = totalTyped + inputVal.length + cumulativeErrors;
-    let acc = 100;
-    if (totalAttempts > 0) {
-        acc = Math.floor(((totalAttempts - cumulativeErrors) / totalAttempts) * 100);
+        line.extra = document.createElement('span');
+        line.extra.className = 'overflow-input';
+        paragraph.append(line.extra);
+        line.element = paragraph;
     }
-    accDisplay.innerText = `${Math.max(0, acc)}%`;
-    
-    // Strict Auto-Enter Logic: 전체 텍스트가 100% 완벽하게 일치할 때만 자동 넘김!
-    // 이를 통해 오타가 있는 상태에서 길이가 우연히 맞아 오작동하는 버그를 원천 차단합니다.
-    const targetText = linesData[currentLineIdx].text;
-    if (inputVal === targetText) {
-        moveToNextLine();
-    } else {
-        updateActiveCharacter();
-    }
-});
+    textDisplay.replaceChildren(...lines.map(line => line.element));
+}
 
-function moveToNextLine() {
-    if (isTransitioning) return;
-    
-    const activeLineDiv = document.getElementById(`line-${currentLineIdx}`);
-    if (!activeLineDiv) return;
-    
-    const characters = linesData[currentLineIdx].characters;
-    
-    totalTyped += characters.length;
-    totalStrokes += getHangulStrokes(linesData[currentLineIdx].text); 
-    currentLineIdx++;
-    
-    isTransitioning = true;
-    // 블러 처리를 통해 한글 IME 조합 상태를 강제로 끊어 스페이스/글자 딸려옴 방지
-    typingInput.blur(); 
+function displayLine(animate = false) {
+    const line = lines[lineIndex];
+    lines.forEach((item, index) => item.element.classList.toggle('active-line', index === lineIndex));
+    byId('line-instruction').textContent = line.text;
     typingInput.value = '';
-    previousInputLength = 0;
-    
-    if (currentLineIdx >= linesData.length) {
-        setTimeout(() => {
-            showModal();
-            isTransitioning = false;
-        }, 300);
-    } else {
-        setTimeout(() => {
-            setupActiveLine();
-            isTransitioning = false;
-            typingInput.focus();
-        }, 150);
+    resetInput();
+    animateNextLine = animate;
+    updateHighlights(line.input, line.input.length);
+}
+
+function updateHighlights(input, caret) {
+    const line = lines[lineIndex];
+    caretIndex = caret;
+    const previousInput = line.visibleInput ?? [];
+    const changedComposition = line.visibleComposing !== composing;
+    line.spans.forEach((span, index) => {
+        const typed = input[index];
+        if (!changedComposition && previousInput[index] === typed) return;
+        const text = typed ?? line.target[index];
+        const inComposition = composing && typed !== undefined && typed !== line.input[index];
+        if (span.textContent !== text) span.textContent = text;
+        span.classList.toggle('composing', inComposition);
+        span.classList.toggle('correct', !inComposition && typed === line.target[index]);
+        span.classList.toggle('incorrect', !inComposition && typed !== undefined && typed !== line.target[index]);
+    });
+    line.spans[line.visibleCaret]?.classList.remove('active');
+    line.spans[caret]?.classList.add('active');
+    line.visibleInput = input;
+    line.visibleCaret = caret;
+    line.visibleComposing = composing;
+    const extra = input.slice(line.target.length).join('');
+    if (line.extra.textContent !== extra) line.extra.textContent = extra;
+    line.extra.classList.toggle('incorrect', !!extra && !composing);
+    line.extra.classList.toggle('composing', !!extra && composing);
+    scheduleAlignment();
+}
+
+function alignPassage() {
+    const line = lines[lineIndex];
+    if (!line?.element) return;
+    const current = caretIndex >= line.spans.length && line.extra.textContent
+        ? line.extra : line.spans[Math.min(caretIndex, line.spans.length - 1)];
+    const bottom = current.offsetTop + current.offsetHeight + 16;
+    const offset = Math.max(line.element.offsetTop, bottom - passage.clientHeight);
+    const position = 'translateY(' + -offset + 'px)';
+    const previous = textDisplay.style.transform;
+    const shouldAnimate = animateNextLine && !reducedMotion.matches;
+    animateNextLine = false;
+    if (previous === position) return;
+    lineMotion?.cancel();
+    textDisplay.style.transform = position;
+    if (shouldAnimate && previous && typeof textDisplay.animate === 'function') {
+        lineMotion = textDisplay.animate(
+            [{ transform: previous }, { transform: position }],
+            { duration: 160, easing: 'cubic-bezier(.2,.65,.3,1)' },
+        );
     }
 }
 
-function getHangulStrokes(text) {
-    let strokes = 0;
-    for (let i = 0; i < text.length; i++) {
-        let code = text.charCodeAt(i);
-        if (code >= 44032 && code <= 55203) { // 가~힣
-            let offset = code - 44032;
-            let jong = offset % 28;
-            let jung = Math.floor(offset / 28) % 21;
-            let cho = Math.floor(offset / 28 / 21);
-            strokes += [1,4,8,10,13].includes(cho) ? 2 : 1; // ㄲㄸㅃㅆㅉ
-            strokes += [9,10,11,14,15,16,19].includes(jung) ? 2 : 1; // ㅘㅙㅚㅝㅞㅟㅢ
-            if (jong > 0) strokes += [3,5,6,9,10,11,12,13,14,15,18,20].includes(jong) ? 2 : 1; // 겹받침
-        } else {
-            strokes += 1; // 알파벳, 숫자, 기호, 띄어쓰기 등
-        }
-    }
-    return strokes;
-}
-function updateWPM() {
-    if (startTime && (typingInput.value.length > 0 || totalTyped > 0) && modal.classList.contains('hidden')) {
-        const now = new Date().getTime();
-        const minutes = (now - startTime) / 60000;
-        if (minutes > 0) {
-            // 한컴타자연습 기준: 글자수(단어)가 아닌 1분당 실제 친 자모음 개수(Strokes) 계산!
-            const currentLineText = linesData[currentLineIdx] ? linesData[currentLineIdx].text.substring(0, typingInput.value.length) : "";
-            const currentStrokes = currentLang === 'ko' ? getHangulStrokes(currentLineText) : currentLineText.length;
-            
-            const wpm = Math.round((totalStrokes + currentStrokes) / minutes);
-            wpmDisplay.innerText = wpm > 0 && wpm < 2500 ? wpm : 0;
-        }
-    }
-    requestAnimationFrame(updateWPM);
-}
-
-// Records saving mechanism
-function saveRecord(title, wpm, acc) {
-    let records = JSON.parse(localStorage.getItem('typingRecords') || '[]');
-    records.push({ title, wpm, acc, date: new Date().toLocaleDateString() });
-    records.sort((a, b) => parseInt(b.wpm) - parseInt(a.wpm));
-    records = records.slice(0, 10); 
-    localStorage.setItem('typingRecords', JSON.stringify(records));
-}
-
-function showModal() {
-    typingInput.blur();
-    
-    modalPoemTitle.innerText = currentPoem.title;
-    modalPoemAuthor.innerText = currentPoem.author;
-    
-    const finalWpm = wpmDisplay.innerText;
-    const finalAcc = accDisplay.innerText;
-    const typoRate = 100 - parseInt(finalAcc);
-    
-    modalWpm.innerText = finalWpm;
-    modalAcc.innerText = finalAcc;
-    modalErrors.innerText = `${typoRate}%`;
-    
-    saveRecord(currentPoem.title, finalWpm, finalAcc);
-    
-    modal.classList.remove('hidden');
-}
-
-// Modal Buttons Actions
-nextBtn.addEventListener('click', () => {
-    modal.classList.add('hidden');
-    init();
-    typingInput.focus();
-});
-
-document.getElementById('share-btn').addEventListener('click', () => {
-    const shareText = `나랏말싸미 📜\n\n📖 작품: ${currentPoem.title}\n⚡ 타수: ${modalWpm.innerText} WPM\n🎯 정확도: ${modalAcc.innerText}\n\n#나랏말싸미 #타자연습 #typing`;
-    
-    // Web Share API가 지원될 경우 (모바일 및 최신 브라우저의 네이티브 공유 기능 실행)
-    if (navigator.share) {
-        navigator.share({
-            title: '나랏말싸미 타자 기록',
-            text: shareText,
-            url: window.location.href
-        }).catch((error) => {
-            console.log('Share failed:', error);
-            fallbackCopy(shareText);
-        });
-    } else {
-        fallbackCopy(shareText);
-    }
-});
-
-function fallbackCopy(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        alert('기록이 클립보드에 복사되었습니다!\n원하는 SNS(카톡, 인스타, 디코 등) 채팅창에 붙여넣어 보세요! ✨');
-    }).catch(err => {
-        alert('클립보드 복사에 실패했습니다. 수동으로 공유해 주세요.');
+function scheduleAlignment() {
+    if (alignFrame !== null) return;
+    alignFrame = requestAnimationFrame(() => {
+        alignFrame = null;
+        alignPassage();
     });
 }
 
-document.getElementById('ranking-btn').addEventListener('click', () => {
-    const rankingList = document.getElementById('ranking-list');
-    const records = JSON.parse(localStorage.getItem('typingRecords') || '[]');
-    
-    rankingList.innerHTML = records.length ? records.map((r, i) => `
-        <div class="ranking-item">
-            <div class="rank-title">${i + 1}위. ${r.title} <span style="font-size:0.85rem; color:gray; font-family:'Pretendard', sans-serif;">(${r.date})</span></div>
-            <div class="rank-stats">타수: ${r.wpm} | 정확도: ${r.acc}</div>
-        </div>
-    `).join('') : '<p style="text-align:center; color:gray; margin-top: 1rem;">아직 기록이 없습니다. 타자를 시작해보세요!</p>';
-    
-    document.getElementById('ranking-modal').classList.remove('hidden');
+window.addEventListener('resize', scheduleAlignment);
+mobileTyping.addEventListener('change', () => {
+    if (startedAt === null) startPractice(work);
+});
+document.fonts?.addEventListener('loadingdone', scheduleAlignment);
+passage.addEventListener('click', () => {
+    if (result) show(resultDialog);
+    else focusTyping();
 });
 
-document.getElementById('close-ranking-btn').addEventListener('click', () => {
-    document.getElementById('ranking-modal').classList.add('hidden');
+function restoreMobileOffset(formatted, prefix) {
+    let count = Array.from(prefix.normalize('NFC').replace(/\s/gu, '')).length;
+    if (!count) return 0;
+    let offset = 0;
+    for (const char of formatted) {
+        offset += char.length;
+        if (!/\s/u.test(char) && --count === 0) return offset;
+    }
+    return formatted.length;
+}
+
+function readLineInput(value) {
+    return readInput(value, lines[lineIndex].reference, autoSpace);
+}
+
+function countInputBefore(text) {
+    return readLineInput(text).input.length;
+}
+
+function acceptInput(selection) {
+    if (result) return;
+    composing = false;
+    animateNextLine = false;
+    lineMotion?.cancel();
+    const line = lines[lineIndex];
+    const value = typingInput.value;
+    const start = typingInput.selectionStart ?? value.length;
+    const end = typingInput.selectionEnd ?? start;
+    const { input, formatted } = readLineInput(value);
+    const caret = start === value.length ? input.length : countInputBefore(value.slice(0, start));
+    // Keep punctuation in the field exactly as typed. The passage shows omitted marks.
+    // Only mobile spacing is rewritten, using the number of non-space characters to restore the caret.
+    if (autoSpace && formatted !== value) {
+        typingInput.value = formatted;
+        typingInput.setSelectionRange(
+            restoreMobileOffset(formatted, value.slice(0, start)),
+            restoreMobileOffset(formatted, value.slice(0, end)),
+        );
+    }
+    commitInput(line, input, selection);
+    if (line.input.length) startClock();
+    updateHighlights(line.input, caret);
+    refreshStats();
+    if (!isLineComplete(line)) return;
+    if (lineIndex === lines.length - 1) finishPractice();
+    else {
+        lineIndex++;
+        displayLine(true);
+    }
+}
+
+const resetInput = bindTyping(typingInput, {
+    countBefore: countInputBefore,
+    preview(value, offset) {
+        if (result) return;
+        composing = true;
+        animateNextLine = false;
+        lineMotion?.cancel();
+        const { input } = readLineInput(value);
+        if (input.length) startClock();
+        updateHighlights(input, offset === value.length ? input.length : countInputBefore(value.slice(0, offset)));
+    },
+    commit: acceptInput,
+});
+typingInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !composing && !event.isComposing && event.keyCode !== 229) {
+        event.preventDefault();
+    }
+});
+for (const eventName of ['paste', 'drop']) {
+    typingInput.addEventListener(eventName, event => event.preventDefault());
+}
+
+function practiceRecords(records) {
+    return Array.isArray(records) ? records.filter(record => record && typeof record.title === 'string') : [];
+}
+
+function savePracticeRecord(record) {
+    const records = [record, ...practiceRecords(readCookie('records'))].slice(0, 12);
+    while (records.length > 1 && encodeURIComponent(JSON.stringify(records)).length > 3500) records.pop();
+    return writeCookie('records', records);
+}
+
+function finishPractice() {
+    const elapsedMs = elapsed();
+    result = { ...scorePractice(lines, language(), elapsedMs), elapsedMs };
+    stopClock();
+    typingInput.readOnly = true;
+    typingInput.blur();
+    refreshStats();
+
+    byId('result-work').textContent = work.title + ' · ' + work.author;
+    byId('result-speed-label').textContent = speedLabel(language());
+    byId('modal-wpm').textContent = result.speed;
+    byId('modal-acc').textContent = result.accuracy + '%';
+    byId('modal-errors').textContent = result.errors;
+    byId('result-time').textContent = '연습 시간 ' + Math.round(result.elapsedMs / 1000) + '초';
+    const record = {
+        title: work.title, author: work.author, language: language(), mode,
+        speed: result.speed, accuracy: result.accuracy, errors: result.errors,
+        date: new Date().toLocaleDateString('ko-KR'),
+    };
+    const saved = savePracticeRecord(record);
+    byId('result-status').textContent = saved ? '이 브라우저에 기록을 저장했어요.' : '브라우저 저장 공간에 기록을 저장할 수 없어요.';
+    show(resultDialog);
+}
+
+byId('retry-btn').addEventListener('click', () => {
+    resultDialog.close();
+    startPractice(work, true);
+});
+byId('next-btn').addEventListener('click', () => {
+    resultDialog.close();
+    startPractice(pickWork(), true);
 });
 
-// Feedback Webhook Logic
-document.getElementById('feedback-btn').addEventListener('click', () => {
-    document.getElementById('feedback-modal').classList.remove('hidden');
+byId('share-btn').addEventListener('click', async () => {
+    if (!result) return;
+    const text = '나랏말싸미 · ' + work.title + '\n' + speedLabel(language()) + ' ' + result.speed + ' · 정확도 ' + result.accuracy + '%';
+    try {
+        if (navigator.share) {
+            await navigator.share({ title: '나랏말싸미 연습 기록', text, url: location.href });
+        } else if (navigator.clipboard) {
+            await navigator.clipboard.writeText(text);
+            byId('result-status').textContent = '공유 문구를 복사했어요.';
+        } else {
+            byId('result-status').textContent = text;
+        }
+    } catch (error) {
+        if (error.name !== 'AbortError') byId('result-status').textContent = '기록을 공유할 수 없어요. 잠시 후 다시 시도해 주세요.';
+    }
 });
 
-document.getElementById('close-feedback-btn').addEventListener('click', () => {
-    document.getElementById('feedback-modal').classList.add('hidden');
-});
-
-document.getElementById('submit-feedback-btn').addEventListener('click', async () => {
-    const text = document.getElementById('feedback-text').value;
-    if (text.trim() === '') {
-        alert('의견을 입력해주세요.');
+const historyFilter = byId('history-filter');
+function renderHistory() {
+    const scope = historyFilter.value;
+    const records = scope === 'legacy'
+        ? [...practiceRecords(readLegacy('typingRecordsV2')), ...practiceRecords(readLegacy('typingRecords'))]
+        : practiceRecords(readCookie('records'));
+    const selected = records.filter(record => {
+        if (scope === 'work') return record.title === work.title && record.author === work.author && record.mode === mode;
+        if (scope === 'ko' || scope === 'en') return record.language === scope;
+        return true;
+    });
+    const list = byId('ranking-list');
+    list.replaceChildren();
+    if (!selected.length) {
+        const empty = document.createElement('li');
+        empty.textContent = '이 범위에 저장된 기록이 없어요.';
+        list.append(empty);
         return;
     }
-    
-    const feedbackData = {
-        content: text,
-        date: new Date().toLocaleString(),
-        timestamp: Date.now()
-    };
-    
-    // Supabase 연동 상태에 따라 저장 방식 결정
-    if (supabaseClient && SUPABASE_URL !== "YOUR_SUPABASE_URL") {
-        try {
-            const { error } = await supabaseClient.from('feedbacks').insert([feedbackData]);
-            if (error) throw error;
-            alert('소중한 의견이 서버에 성공적으로 기록되었습니다!');
-        } catch(e) {
-            alert('서버 전송 실패. 로컬에 임시 저장합니다. (Supabase 테이블 설정을 확인하세요!)');
-            saveLocalFeedback(feedbackData);
-        }
-    } else {
-        saveLocalFeedback(feedbackData);
-        alert('소중한 의견이 기기에 임시 기록되었습니다! (DB 연동 필요)');
-    }
-    
-    document.getElementById('feedback-text').value = '';
-    document.getElementById('feedback-modal').classList.add('hidden');
-});
-
-function saveLocalFeedback(data) {
-    let feedbacks = JSON.parse(localStorage.getItem('userFeedbacks') || '[]');
-    feedbacks.push(data);
-    localStorage.setItem('userFeedbacks', JSON.stringify(feedbacks));
-}
-
-// Admin Easter Egg & Security Logic
-let hangulClickCount = 0;
-let hangulClickTimer = null;
-
-const targetHash = "cmdi";
-
-function hashPassword(str) {
-    try {
-        return btoa(str); // 안정성이 가장 뛰어난 내장 인코딩 방식 사용
-    } catch(e) {
-        return "error"; // 한글 등 특수문자 입력 시 에러 방지 및 오답 처리
+    for (const record of selected) {
+        const item = document.createElement('li');
+        const title = document.createElement('strong');
+        const metrics = document.createElement('p');
+        title.textContent = record.title;
+        metrics.textContent = scope === 'legacy'
+            ? '이전 기록 · 타수 ' + (record.speed ?? record.wpm) + ' · 정확도 ' + (record.accuracy !== undefined ? record.accuracy + '%' : record.acc) + ' · ' + record.date
+            : speedLabel(record.language) + ' ' + record.speed + ' · 정확도 ' + record.accuracy + '% · ' + record.date;
+        item.append(title, metrics);
+        list.append(item);
     }
 }
+function openHistory(event) {
+    historyFilter.value = 'all';
+    renderHistory();
+    show(historyDialog, null, event.detail > 0);
+}
+byId('history-btn').addEventListener('click', openHistory);
+byId('ranking-btn').addEventListener('click', openHistory);
+historyFilter.addEventListener('change', renderHistory);
 
-document.getElementById('hangul-btn').addEventListener('click', () => {
-    hangulClickCount++;
-    
-    clearTimeout(hangulClickTimer);
-    hangulClickTimer = setTimeout(() => { hangulClickCount = 0; }, 3000); // 3초 내에 10번 클릭해야 함
-    
-    if (hangulClickCount >= 10) {
-        hangulClickCount = 0;
-        document.getElementById('admin-password').value = '';
-        document.getElementById('admin-login-modal').classList.remove('hidden');
-    }
+document.querySelectorAll('[data-mode]').forEach(button => {
+    button.addEventListener('click', () => {
+        koreanMode = button.dataset.mode;
+        if (mode === koreanMode) return;
+        mode = koreanMode;
+        startPractice();
+    });
 });
-
-document.getElementById('close-admin-login-btn').addEventListener('click', () => {
-    document.getElementById('admin-login-modal').classList.add('hidden');
-});
-
-document.getElementById('admin-password').addEventListener('keyup', (e) => {
-    if (e.key === 'Enter') {
-        document.getElementById('submit-admin-login-btn').click();
-    }
-});
-
-document.getElementById('submit-admin-login-btn').addEventListener('click', () => {
-    const pwd = document.getElementById('admin-password').value.trim(); // 혹시 모를 띄어쓰기 공백 제거
-    
-    // 사용자의 입력값을 해시화하여 안전하게 고정된 해시값과 비교
-    const inputHash = hashPassword(pwd);
-    
-    if (inputHash === targetHash) {
-        document.getElementById('admin-login-modal').classList.add('hidden');
-        showAdminPanel();
-    } else {
-        alert('비밀번호가 틀렸습니다.');
-    }
-});
-
-async function showAdminPanel() {
-    const list = document.getElementById('admin-feedback-list');
-    list.innerHTML = '<p style="text-align:center; color:gray; margin-top:1rem;">불러오는 중...</p>';
-    document.getElementById('admin-panel-modal').classList.remove('hidden');
-    
-    let feedbacks = [];
-    
-    if (supabaseClient && SUPABASE_URL !== "YOUR_SUPABASE_URL") {
-        try {
-            const { data, error } = await supabaseClient.from('feedbacks').select('*').order('timestamp', { ascending: false });
-            if (error) throw error;
-            feedbacks = data;
-        } catch (e) {
-            list.innerHTML = '<p style="text-align:center; color:red;">서버에서 불러오기 실패. (Supabase 연결 확인)</p>';
+document.querySelectorAll('[data-language]').forEach(button => {
+    button.addEventListener('click', () => {
+        if (language() === button.dataset.language) {
+            if (desktopTyping.matches && !result) focusTyping();
             return;
         }
-    } else {
-        feedbacks = JSON.parse(localStorage.getItem('userFeedbacks') || '[]').reverse();
-    }
-    
-    if (feedbacks.length === 0) {
-        list.innerHTML = '<p style="text-align:center; color:gray; margin-top:1rem; font-family: Pretendard, sans-serif;">아직 등록된 의견이 없습니다.</p>';
-    } else {
-        list.innerHTML = feedbacks.map(f => `
-            <div class="feedback-item">
-                <div class="fb-date">${f.date}</div>
-                <div class="fb-content">${f.content}</div>
-            </div>
-        `).join('');
-    }
-}
-
-document.getElementById('close-admin-panel-btn').addEventListener('click', () => {
-    document.getElementById('admin-panel-modal').classList.add('hidden');
-});
-
-// Manage global focus
-document.addEventListener('click', (e) => {
-    const isModalOpen = document.querySelectorAll('.modal:not(.hidden)').length > 0;
-    const safeElements = ['BUTTON', 'SELECT', 'TEXTAREA', 'INPUT', 'path', 'svg'];
-    const safeIds = ['feedback-btn', 'skip-btn', 'settings-btn', 'search-btn', 'search-input'];
-    
-    const isSafeClick = safeElements.includes(e.target.tagName) || 
-                        safeIds.includes(e.target.id) || 
-                        e.target.closest('.icon-btn') ||
-                        e.target.closest('.option-card') || 
-                        e.target.closest('.type-card') ||
-                        e.target.closest('.theme-card') ||
-                        e.target.closest('.search-result-card');
-    
-    if (!isModalOpen && !isSafeClick) {
-        typingInput.focus();
-    }
-});
-
-// Modals & Search Management
-const searchBtn = document.getElementById('search-btn');
-const searchModal = document.getElementById('search-modal');
-const searchInput = document.getElementById('search-input');
-const searchResults = document.getElementById('search-results');
-const searchEmptyState = document.getElementById('search-empty-state');
-
-function buildSearchIndex() {
-    const allTexts = [
-        ...poemCollections.map(p => ({ ...p, type: 'poem', lang: 'ko' })),
-        ...longCollections.map(l => ({ ...l, type: 'long', lang: 'ko' })),
-        ...englishCollections.map(e => ({ ...e, type: 'poem', lang: 'en' }))
-    ];
-
-    searchResults.innerHTML = allTexts.map((item, idx) => `
-        <div class="search-result-card" data-index="${idx}">
-            <div class="sr-title">${item.title}</div>
-            <div class="sr-author">${item.author}</div>
-            <div class="sr-tags">
-                ${(item.keywords || []).map(k => `<span class="search-tag">${k}</span>`).join('')}
-            </div>
-        </div>
-    `).join('');
-
-    // Add click logic
-    document.querySelectorAll('.search-result-card').forEach((card, idx) => {
-        card.addEventListener('click', () => {
-            const selectedText = allTexts[idx];
-            // Switch internal type and lang just in case
-            currentType = selectedText.type;
-            currentLang = selectedText.lang;
-            // Force UI active state updates for new state
-            if (currentLang === 'ko') {
-                document.getElementById('hangul-btn').classList.add('active');
-                document.getElementById('english-btn').classList.remove('active');
-            } else {
-                document.getElementById('english-btn').classList.add('active');
-                document.getElementById('hangul-btn').classList.remove('active');
-            }
-            
-            searchModal.classList.add('hidden');
-            init(selectedText);
-            typingInput.focus();
-        });
+        mode = button.dataset.language === 'en' ? 'en' : koreanMode;
+        startPractice(undefined, desktopTyping.matches);
     });
+});
+byId('skip-btn').addEventListener('click', () => startPractice(undefined, desktopTyping.matches));
+
+const searchInput = byId('search-input');
+const searchFilter = byId('search-filter');
+const searchIndex = Object.entries(collections).flatMap(([kind, texts]) => texts.map(text => ({
+    text, kind, query: [text.title, text.author, ...(text.keywords ?? [])].join(' ').normalize('NFC').toLowerCase(),
+})));
+
+function renderSearch() {
+    const query = searchInput.value.normalize('NFC').toLowerCase().trim().split(/\s+/u).filter(Boolean);
+    const kind = searchFilter.value;
+    const matches = searchIndex.filter(item => (kind === 'all' || item.kind === kind) && query.every(word => item.query.includes(word)));
+    const list = byId('search-results');
+    list.replaceChildren();
+    for (const item of matches) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'search-result-card';
+        const title = document.createElement('strong');
+        const caption = document.createElement('span');
+        title.textContent = item.text.title;
+        caption.textContent = item.text.author + ' · ' + modeLabels[item.kind];
+        title.className = 'sr-title';
+        caption.className = 'sr-author';
+        button.append(title, caption);
+        button.addEventListener('click', () => {
+            mode = item.kind;
+            if (mode !== 'en') koreanMode = mode;
+            searchDialog.close();
+            startPractice(item.text, true);
+        });
+        list.append(button);
+    }
+    byId('search-status').textContent = matches.length ? matches.length + '개 작품' : '찾는 작품이 없어요.';
+    byId('clear-search-btn').hidden = matches.length > 0;
 }
-
-buildSearchIndex();
-
-searchBtn.addEventListener('click', () => {
-    searchModal.classList.remove('hidden');
+byId('search-btn').addEventListener('click', event => {
     searchInput.value = '';
-    searchInput.dispatchEvent(new Event('input'));
-    setTimeout(() => searchInput.focus(), 100);
+    searchFilter.value = 'all';
+    renderSearch();
+    show(searchDialog, searchInput, event.detail > 0);
 });
+searchInput.addEventListener('input', renderSearch);
+searchFilter.addEventListener('change', renderSearch);
 
-document.getElementById('close-search-modal-btn').addEventListener('click', () => {
-    searchModal.classList.add('hidden');
-});
+const fontChoices = document.querySelectorAll('[data-font-choice]');
+const themeChoices = document.querySelectorAll('[data-theme-choice]');
+let font = initialFont;
+let theme = settings && Array.from(themeChoices).some(button => button.dataset.themeChoice === settings.theme)
+    ? settings.theme : 'light';
 
-searchInput.addEventListener('input', (e) => {
-    const query = e.target.value.toLowerCase().trim();
-    const cards = document.querySelectorAll('.search-result-card');
-    let visibleCount = 0;
-
-    cards.forEach(card => {
-        const title = card.querySelector('.sr-title').innerText.toLowerCase();
-        const author = card.querySelector('.sr-author').innerText.toLowerCase();
-        const tags = Array.from(card.querySelectorAll('.search-tag')).map(t => t.innerText.toLowerCase());
-        
-        const isMatch = title.includes(query) || author.includes(query) || tags.some(t => t.includes(query));
-        
-        if (isMatch) {
-            card.style.display = 'flex';
-            visibleCount++;
-        } else {
-            card.style.display = 'none';
+function applySettings() {
+    applyTypeface(font);
+    document.documentElement.dataset.theme = theme;
+    for (const button of [...fontChoices, ...themeChoices]) {
+        const selected = button.dataset.fontChoice === font || button.dataset.themeChoice === theme;
+        button.classList.toggle('selected', selected);
+        button.setAttribute('aria-pressed', String(selected));
+    }
+    alignPassage();
+}
+applySettings();
+if (!savedSettings) writeCookie('settings', { font, theme });
+for (const button of [...fontChoices, ...themeChoices]) {
+    button.addEventListener('click', () => {
+        font = button.dataset.fontChoice ?? font;
+        theme = button.dataset.themeChoice ?? theme;
+        applySettings();
+        writeCookie('settings', { font, theme });
+    });
+}
+const settingsTabs = document.querySelectorAll('.settings-tab-btn');
+for (const tab of settingsTabs) {
+    tab.addEventListener('click', () => {
+        for (const other of settingsTabs) {
+            const active = other === tab;
+            other.classList.toggle('active', active);
+            other.setAttribute('aria-pressed', String(active));
+            byId(other.dataset.target).style.display = active ? 'block' : 'none';
         }
     });
+}
+byId('settings-btn').addEventListener('click', event => show(settingsDialog, null, event.detail > 0));
 
-    searchEmptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+byId('help-btn').addEventListener('click', event => show(helpDialog, null, event.detail > 0));
+byId('clear-search-btn').addEventListener('click', () => {
+    searchInput.value = '';
+    searchFilter.value = 'all';
+    renderSearch();
+    searchInput.focus();
 });
 
-document.getElementById('request-poem-btn').addEventListener('click', () => {
-    searchModal.classList.add('hidden');
-    const feedbackText = document.getElementById('feedback-text');
-    feedbackText.value = `[시 추가 요청]\n요청하신 내용: ${searchInput.value}`;
-    document.getElementById('feedback-modal').classList.remove('hidden');
-    setTimeout(() => feedbackText.focus(), 100);
-});
-
-// Modals Management
-const settingsBtn = document.getElementById('settings-btn');
-const settingsModal = document.getElementById('settings-modal');
-
-settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
-document.getElementById('close-settings-modal-btn').addEventListener('click', () => settingsModal.classList.add('hidden'));
-
-// Internal Settings Modal Tab Switching
-const settingsTabBtns = document.querySelectorAll('.settings-tab-btn');
-const settingsPanels = document.querySelectorAll('.settings-panel');
-
-settingsTabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        // Reset active state on buttons
-        settingsTabBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        // Hide all panels and show target
-        const targetId = btn.getAttribute('data-target');
-        settingsPanels.forEach(panel => {
-            if (panel.id === targetId) {
-                panel.style.display = 'block';
-            } else {
-                panel.style.display = 'none';
-            }
-        });
-    });
-});
-
-// Font Selection Logic
-const fontOptions = document.querySelectorAll('#font-options .option-card');
-fontOptions.forEach(option => {
-    option.addEventListener('click', () => {
-        fontOptions.forEach(o => o.classList.remove('selected'));
-        option.classList.add('selected');
-        currentFont = option.getAttribute('data-font');
-        textDisplay.style.fontFamily = currentFont;
-        // Modal remains open for more settings or could close. Keeping open is nicer for unified settings.
-    });
-});
-
-// Type Selection Logic
-const typeCards = document.querySelectorAll('.type-card');
-typeCards.forEach(card => {
-    card.addEventListener('click', () => {
-        typeCards.forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-        const newType = card.getAttribute('data-type');
-        
-        if (currentType !== newType) {
-            currentType = newType;
-            init();
-        }
-    });
-});
-
-// Theme Selection Logic
-const themeCards = document.querySelectorAll('.theme-card');
-themeCards.forEach(card => {
-    card.addEventListener('click', () => {
-        themeCards.forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-        currentTheme = card.getAttribute('data-theme');
-        document.documentElement.setAttribute('data-theme', currentTheme);
-    });
-});
-
-document.getElementById('skip-btn').addEventListener('click', () => {
-    init();
-    typingInput.focus();
-});
-
-document.getElementById('hangul-btn').addEventListener('click', () => {
-    if (currentLang !== 'ko') {
-        currentLang = 'ko';
-        document.getElementById('hangul-btn').classList.add('active');
-        document.getElementById('hangul-btn').style.color = '';
-        document.getElementById('english-btn').classList.remove('active');
-        document.getElementById('english-btn').style.color = 'var(--text-secondary)';
-        init();
-        typingInput.focus();
-    }
-});
-
-document.getElementById('english-btn').addEventListener('click', () => {
-    if (currentLang !== 'en') {
-        currentLang = 'en';
-        document.getElementById('english-btn').classList.add('active');
-        document.getElementById('english-btn').style.color = '';
-        document.getElementById('hangul-btn').classList.remove('active');
-        document.getElementById('hangul-btn').style.color = 'var(--text-secondary)';
-        init();
-        typingInput.focus();
-    }
-});
-
-// Removed font-selector event listener (moved to modal)
-
-init();
-typingInput.focus();
-requestAnimationFrame(updateWPM);
+startPractice(undefined, desktopTyping.matches);
