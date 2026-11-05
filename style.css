@@ -92,10 +92,12 @@ header {
 }
 
 .logo {
+    font-family: var(--brand-font, Gungsuh, "궁서", serif);
     font-weight: 900;
     color: var(--text-primary);
     font-size: 2.2rem;
     letter-spacing: -2px;
+    text-decoration: none;
 }
 
 .nav-links {
@@ -186,6 +188,8 @@ main {
     margin: 0 0.5rem;
     color: var(--text-primary);
 }
+
+#poem-title { font-family: var(--brand-font, Gungsuh, "궁서", serif); }
 
 .typing-container {
     width: 100%;
@@ -900,6 +904,87 @@ dialog.modal[open] .modal-content { animation: modal-enter 160ms ease-out; }
 button.search-result-card, button.type-card, button.option-card, button.theme-card { text-align: inherit; transform: none; box-shadow: none; }
 button.search-result-card { width: 100%; align-items: flex-start; }
 .type-title, .type-preview { display: block; }
+
+main:has(.practice-guide:not([hidden])) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+    gap: clamp(1.5rem, 3vw, 3rem);
+}
+.main-content { min-width: 0; }
+.practice-guide {
+    min-width: 0;
+    padding: 1.125rem;
+    border: 1px solid var(--border-color);
+    border-radius: 1.125rem;
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+.practice-guide-heading, .guide-keyboard-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem;
+}
+.practice-guide-heading h2 { font-size: 1.0625rem; }
+.practice-guide-heading .icon-btn { min-width: 36px; min-height: 36px; }
+.practice-guide-heading .icon-btn svg { width: 17px; height: 17px; }
+.guide-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .625rem;
+    margin-block: .7rem 1.125rem;
+}
+.guide-metric {
+    padding: .75rem;
+    border: 1px solid var(--border-color);
+    border-radius: .75rem;
+    background: var(--bg-color);
+}
+.guide-metric h3, .guide-keyboard-heading h3 { font-size: .8125rem; font-weight: 700; }
+.guide-metric-value { margin-block: .35rem .2rem; font-size: 1.375rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.guide-metric-note, .guide-hint { font-size: .75rem; line-height: 1.5; color: var(--text-secondary); }
+.guide-language-warning { color: var(--text-primary); font-weight: 700; }
+.guide-metric progress { display: block; width: 100%; height: .45rem; margin-top: .5rem; accent-color: var(--accent-color); }
+.guide-keyboard-heading { flex-wrap: wrap; }
+#guide-next-key { font-size: .75rem; font-weight: 700; overflow-wrap: anywhere; }
+.guide-keyboard {
+    display: grid;
+    gap: .2rem;
+    padding: .35rem;
+    margin-block: .5rem .7rem;
+    border: 1px solid var(--border-color);
+    border-radius: .625rem;
+    background: var(--bg-color);
+}
+.guide-keyboard-row { display: flex; gap: .18rem; justify-content: center; }
+.guide-key {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 25px;
+    padding: .1rem;
+    border: 1px solid var(--border-color);
+    border-radius: .25rem;
+    background: var(--card-bg);
+    font: inherit;
+    font-size: .625rem;
+    line-height: 1.05;
+}
+.guide-key small { margin-top: .1rem; font-size: .625rem; }
+.practice-guide[data-layout="en"] .guide-key small { display: none; }
+.guide-key[data-key="Shift"], .guide-key[data-key="Backspace"] { flex-grow: 1.7; }
+.guide-key[data-key="Space"] { flex: 0 1 52%; }
+.guide-key.is-next { background: var(--text-primary); border-color: var(--text-primary); color: var(--bg-color); }
+
+@media (max-width: 990px) {
+    body:has(.practice-guide:not([hidden])) { min-height: 100dvh; height: auto; overflow-y: auto; }
+    body:has(.practice-guide:not([hidden])) .wrapper { height: auto; min-height: 100dvh; }
+    main:has(.practice-guide:not([hidden])) { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; padding-block: 1.5rem; }
+    .practice-guide { width: min(100%, 440px); }
+}
 
 @media (max-height: 620px) and (min-width: 769px) and (pointer: fine) {
     body {

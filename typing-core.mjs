@@ -1,9 +1,13 @@
+const equivalentMarks = { '‘': "'", '’': "'", '“': '"', '”': '"', '–': '-', '—': '-' };
+
 export function isAutomatic(char, autoSpace) {
-    return /\p{P}/u.test(char) || (autoSpace && /\s/u.test(char));
+    return autoSpace && /\s/u.test(char);
 }
 
 export function characters(text, autoSpace = true) {
-    return Array.from(text.normalize('NFC')).filter(char => !isAutomatic(char, autoSpace));
+    return Array.from(text.normalize('NFC'))
+        .filter(char => !isAutomatic(char, autoSpace))
+        .map(char => equivalentMarks[char] ?? char);
 }
 
 export function bindTyping(input, { preview, commit, countBefore = text => characters(text).length }) {
@@ -77,17 +81,16 @@ export function bindTyping(input, { preview, commit, countBefore = text => chara
 }
 
 export function readInput(value, target, autoSpace) {
-    const input = [];
+    const input = characters(value, autoSpace);
+    if (!autoSpace) return { input, formatted: value };
+
     let index = 0;
     let formatted = '';
     for (const char of value.normalize('NFC')) {
-        if (autoSpace && /\s/u.test(char)) continue;
-        while (index < target.length && target[index] !== char && isAutomatic(target[index], autoSpace)) {
-            if (/\s/u.test(target[index])) formatted += target[index];
-            index++;
+        if (isAutomatic(char, true)) continue;
+        while (index < target.length && isAutomatic(target[index], true)) {
+            formatted += target[index++];
         }
-        const matchesOptionalMark = target[index] === char && isAutomatic(char, autoSpace);
-        if (!matchesOptionalMark) input.push(char);
         formatted += char;
         index++;
     }

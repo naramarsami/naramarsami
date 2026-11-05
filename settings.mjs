@@ -14,7 +14,6 @@ const typefaces = {
 };
 
 const loadedStylesheets = new Set();
-let gungsuhRegistered = false;
 
 export function readCookie(key) {
     try {
@@ -40,11 +39,6 @@ export const initialFont = Object.hasOwn(typefaces, settings.font) ? settings.fo
 
 export function applyTypeface(font) {
     const { stack, stylesheet, google } = typefaces[font];
-    if (font === 'gungsuh' && !gungsuhRegistered) {
-        const source = new URL('./Gungsuh-Regular.woff2', import.meta.url);
-        document.fonts.add(new FontFace('Narat Gungsuh', `url("${source}") format("woff2")`, { display: 'swap' }));
-        gungsuhRegistered = true;
-    }
     const href = stylesheet ?? (google && 'https://fonts.googleapis.com/css2?family=' + google + '&display=swap');
     if (href && !loadedStylesheets.has(href)) {
         const link = document.createElement('link');
@@ -56,4 +50,7 @@ export function applyTypeface(font) {
     document.documentElement.style.setProperty('--site-font', stack);
 }
 
+const gungsuhSource = new URL('./Gungsuh-Regular.woff2', import.meta.url);
+document.fonts.add(new FontFace('Narat Gungsuh', `local("Gungsuh"), url("${gungsuhSource}") format("woff2")`, { display: 'swap' }));
+document.documentElement.style.setProperty('--brand-font', typefaces.gungsuh.stack);
 applyTypeface(initialFont);

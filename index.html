@@ -19,13 +19,13 @@
     <meta property="og:url" content="https://naramarsami.github.io/naramarsami/">
     <meta property="og:site_name" content="나랏말싸미">
     
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
     <div class="wrapper">
         <header>
             <h1 class="sr-only">나랏말싸미 - 한글 타자 연습</h1>
-            <div class="logo">나랏말싸미</div>
+            <a class="logo" href="https://xn--lg3by0shrak48b.kro.kr/" aria-label="나랏말싸미 홈">나랏말싸미</a>
             <nav class="nav-links" aria-label="메인 메뉴">
                 <div class="lang-selector">
                     <button type="button" class="active" id="hangul-btn" data-language="ko" aria-pressed="true">한글</button>
@@ -39,7 +39,7 @@
                     <button id="skip-btn" class="icon-btn" aria-label="새 글 (새로고침)">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                     </button>
-                    <button id="help-btn" class="icon-btn" aria-label="연습 도움말">
+                    <button id="help-btn" class="icon-btn" type="button" aria-label="연습 가이드" aria-expanded="false" aria-controls="practice-guide">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                     </button>
                     <button id="settings-btn" class="icon-btn" aria-label="설정">
@@ -70,6 +70,32 @@
                     placeholder="위 문장을 입력하세요">
                 <p id="practice-hint" class="sr-only">한 줄을 정확하게 입력하면 다음 줄로 이어져요.</p>
             </article>
+            <aside class="practice-guide" id="practice-guide" aria-labelledby="practice-guide-title" hidden>
+                <div class="practice-guide-heading">
+                    <h2 id="practice-guide-title">연습 가이드</h2>
+                    <button class="icon-btn" id="close-guide-btn" type="button" aria-label="연습 가이드 닫기">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                    </button>
+                </div>
+                <div class="guide-metrics">
+                    <div class="guide-metric">
+                        <h3>최근 입력 언어</h3>
+                        <p class="guide-metric-value" id="guide-language">대기</p>
+                        <p class="guide-metric-note" id="guide-language-note" role="status">입력하면 표시돼요.</p>
+                    </div>
+                    <div class="guide-metric">
+                        <h3>현재 줄 진행률</h3>
+                        <p class="guide-metric-value" id="guide-progress-value">0%</p>
+                        <progress id="guide-progress" aria-label="현재 줄 진행률" max="100" value="0"></progress>
+                    </div>
+                </div>
+                <div class="guide-keyboard-heading">
+                    <h3>다음 글자 위치</h3>
+                    <p id="guide-next-key"></p>
+                </div>
+                <div class="guide-keyboard" id="guide-keyboard" aria-hidden="true"></div>
+                <p class="guide-hint" id="help-typing-hint"></p>
+            </aside>
         </main>
 
         <footer>
@@ -145,17 +171,6 @@
         </div>
     </dialog>
 
-    <!-- Feedback Modal -->
-    <dialog id="help-modal" class="modal" aria-labelledby="help-title">
-        <div class="modal-content">
-            <h2 class="modal-title" id="help-title">연습 도움말</h2>
-            <p class="modal-poem-info" id="help-typing-hint">한 줄을 정확하게 입력하면 다음 줄로 이어져요.</p>
-            <p class="dialog-note">한글 타수는 맞게 입력한 자소를, 영어 타수는 맞게 입력한 글자를 작품 전체의 연습 시간으로 나눠 분당 수치로 표시해요.</p>
-            <p class="dialog-note">최근 연습 기록과 설정은 이 브라우저에 저장돼요.</p>
-            <form method="dialog"><button class="dialog-close" type="submit">닫기</button></form>
-        </div>
-    </dialog>
-
     <!-- Unified Settings Modal -->
     <dialog id="settings-modal" class="modal" aria-labelledby="settings-title">
         <div class="modal-content settings-content">
@@ -206,6 +221,7 @@
                 </div>
             </div>
 
+            <button id="settings-guide-btn" class="dialog-close" type="button" aria-controls="practice-guide">연습 가이드 열기</button>
             <form method="dialog"><button id="close-settings-modal-btn" class="secondary" type="submit">완료</button></form>
         </div>
     </dialog>
@@ -235,6 +251,6 @@
         </div>
     </dialog>
 
-    <script type="module" src="script.js?v=9"></script>
+    <script type="module" src="script.js?v=10"></script>
 </body>
 </html>

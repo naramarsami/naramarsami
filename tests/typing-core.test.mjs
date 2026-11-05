@@ -54,27 +54,30 @@ test('uses the edit position to score repeated characters inserted in the middle
     assert.deepEqual(scorePractice([state], 'en', 60000), { speed: 2, accuracy: 33.3, errors: 2 });
 });
 
-test('PC requires typed spaces but fills punctuation without counting it as keystrokes', () => {
+test('PC requires typed spaces and punctuation, including the final period', () => {
     const text = '“안녕,” 반가워.';
     const missingSpace = line(text, false);
-    enter(missingSpace, '안녕반가워');
+    enter(missingSpace, '"안녕,"반가워.');
     assert.equal(isLineComplete(missingSpace), false);
 
     const state = line(text, false);
-    enter(state, '안녕 반가워');
+    enter(state, '"안녕," 반가워');
+    assert.equal(isLineComplete(state), false);
+    enter(state, '"안녕," 반가워.');
     assert.equal(isLineComplete(state), true);
-    assert.equal(state.attempts, 6);
-    assert.deepEqual(scorePractice([state], 'ko', 60000), { speed: 13, accuracy: 100, errors: 0 });
+    assert.equal(state.attempts, 10);
+    assert.deepEqual(scorePractice([state], 'ko', 60000), { speed: 17, accuracy: 100, errors: 0 });
 });
 
-test('mobile fills spaces and accepts optional punctuation from the reference', () => {
+test('mobile fills spaces and waits for the final punctuation', () => {
     const text = "It's fine.";
     const state = line(text);
-    assert.equal(enter(state, 'Itsfine'), 'Its fine');
-    assert.equal(enter(state, "It's fine."), "It's fine.");
+    assert.equal(enter(state, "It'sfine"), "It's fine");
+    assert.equal(isLineComplete(state), false);
+    assert.equal(enter(state, "It'sfine."), "It's fine.");
     assert.equal(isLineComplete(state), true);
-    assert.equal(state.attempts, 7);
-    assert.equal(scorePractice([state], 'en', 60000).speed, 7);
+    assert.equal(state.attempts, 9);
+    assert.equal(scorePractice([state], 'en', 60000).speed, 9);
 });
 
 test('wrong, misplaced, or extra punctuation counts as an error on PC and mobile', () => {
@@ -85,12 +88,10 @@ test('wrong, misplaced, or extra punctuation counts as an error on PC and mobile
             assert.equal(isLineComplete(state), false, wrong);
             assert.ok(state.errors > 0, wrong);
         }
-        for (const correct of ['안녕 친구', '안녕, 친구.']) {
-            const state = line('안녕, 친구.', autoSpace);
-            enter(state, correct);
-            assert.equal(isLineComplete(state), true, correct);
-            assert.equal(state.errors, 0);
-        }
+        const state = line('안녕, 친구.', autoSpace);
+        enter(state, '안녕, 친구.');
+        assert.equal(isLineComplete(state), true);
+        assert.equal(state.errors, 0);
     }
 });
 
@@ -100,7 +101,7 @@ test('a mistyped apostrophe lowers accuracy immediately and correction allows pr
     enter(state, 'It?');
     assert.deepEqual(scorePractice([state], 'en', 60000), { speed: 2, accuracy: 66.7, errors: 1 });
     enter(state, 'It');
-    enter(state, "It's fine");
+    enter(state, "It's fine.");
     assert.equal(isLineComplete(state), true);
     assert.equal(state.errors, 1);
 });
@@ -109,11 +110,18 @@ test('matching the final character cannot complete a line with an earlier typo',
     const state = line('한 줄을 확인해요.', false);
     enter(state, '한 줄을 확인해');
     assert.equal(isLineComplete(state), false);
-    enter(state, '한 글을 확인해요');
+    enter(state, '한 글을 확인해요.');
     assert.equal(state.input.length, state.target.length);
     assert.equal(isLineComplete(state), false);
-    enter(state, '한 줄을 확인해요');
+    enter(state, '한 줄을 확인해요.');
     assert.equal(isLineComplete(state), true);
+});
+
+test('straight quotes and the standard hyphen can type matching typographic marks', () => {
+    const state = line('Who said—“Two”', false);
+    enter(state, 'Who said-"Two"');
+    assert.equal(isLineComplete(state), true);
+    assert.equal(state.errors, 0);
 });
 
 class TypingField extends EventTarget {

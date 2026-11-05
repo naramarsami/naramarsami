@@ -1,5 +1,7 @@
-import { bindTyping, characters, readInput, isAutomatic, isLineComplete, commitInput, scorePractice } from './typing-core.mjs?v=9';
-import { applyTypeface, initialFont, readCookie, readLegacy, savedSettings, settings } from './settings.mjs?v=9';
+import { bindTyping, characters, readInput, isAutomatic, isLineComplete, commitInput, scorePractice } from './typing-core.mjs?v=10';
+import { applyTypeface, initialFont, readCookie, readLegacy, savedSettings, settings } from './settings.mjs?v=10';
+import { archivePracticeRecords, practiceRecords, readPracticeRecords } from './practice-history.mjs?v=10';
+import { keyboardRows, koreanKeyLabels, nextKeyFor } from './typing-guide.mjs?v=10';
 
 const poemCollections = [
     {
@@ -178,8 +180,16 @@ const passage = textDisplay.parentElement;
 const resultDialog = byId('result-modal');
 const searchDialog = byId('search-modal');
 const historyDialog = byId('ranking-modal');
-const helpDialog = byId('help-modal');
 const settingsDialog = byId('settings-modal');
+const practiceGuide = byId('practice-guide');
+const guideToggle = byId('help-btn');
+const guideKeys = new Map();
+const guideKeyNames = { Space: '스페이스', Backspace: '⌫', Shift: 'Shift' };
+const guideLanguage = byId('guide-language');
+const guideLanguageNote = byId('guide-language-note');
+const guideProgress = byId('guide-progress');
+const guideProgressValue = byId('guide-progress-value');
+const guideNextKey = byId('guide-next-key');
 const desktopTyping = matchMedia('(min-width: 769px) and (pointer: fine)');
 const mobileTyping = matchMedia('(max-width: 768px), (pointer: coarse)');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -200,6 +210,12 @@ let caretIndex = 0;
 let animateNextLine = false;
 let lineMotion;
 let autoSpace = mobileTyping.matches;
+let inputLanguage;
+let activeGuideKeys = [];
+
+let recordStorage;
+try { recordStorage = window.localStorage; } catch { recordStorage = null; }
+archivePracticeRecords(recordStorage, readCookie('records'));
 
 function writeCookie(key, value) {
     try {
@@ -229,6 +245,85 @@ function show(dialog, focus, resumeTyping = false) {
 
 function language() {
     return mode === 'en' ? 'en' : 'ko';
+}
+
+function buildGuideKeyboard() {
+    const rows = keyboardRows.map(keys => {
+        const row = document.createElement('div');
+        row.className = 'guide-keyboard-row';
+        for (const key of keys) {
+            const cap = document.createElement('kbd');
+            cap.className = 'guide-key';
+            cap.dataset.key = key;
+            cap.textContent = guideKeyNames[key] ?? key.toUpperCase();
+            if (koreanKeyLabels[key]) {
+                const korean = document.createElement('small');
+                korean.textContent = koreanKeyLabels[key];
+                cap.append(korean);
+            }
+            row.append(cap);
+            guideKeys.set(key, cap);
+        }
+        return row;
+    });
+    byId('guide-keyboard').append(...rows);
+}
+
+function updateGuideLanguage() {
+    const needsSwitch = inputLanguage && inputLanguage !== language();
+    const label = inputLanguage === 'ko' ? 'KR' : inputLanguage === 'en' ? 'EN' : '대기';
+    const note = needsSwitch ? (language() === 'ko' ? '한글로 바꿔 주세요.' : '영어로 바꿔 주세요.')
+        : inputLanguage ? '마지막으로 입력한 언어예요.' : '입력하면 표시돼요.';
+    if (guideLanguage.textContent !== label) guideLanguage.textContent = label;
+    if (guideLanguageNote.textContent !== note) guideLanguageNote.textContent = note;
+    guideLanguageNote.classList.toggle('guide-language-warning', Boolean(needsSwitch));
+}
+
+function observeInputLanguage(event) {
+    const letter = event.data?.match(/[a-z\p{Script=Hangul}]/giu)?.at(-1);
+    if (!letter) return;
+    const detected = /\p{Script=Hangul}/u.test(letter) ? 'ko' : 'en';
+    if (detected === inputLanguage) return;
+    inputLanguage = detected;
+    if (!practiceGuide.hidden) updateGuideLanguage();
+}
+
+function updatePracticeGuide(line, input, caret) {
+    if (practiceGuide.hidden) return;
+    const correct = line.target.filter((char, index) => line.input[index] === char).length;
+    const percent = Math.floor(correct * 100 / line.target.length);
+    guideProgress.value = percent;
+    guideProgressValue.textContent = percent + '%';
+
+    const composingChar = composing && input[caret - 1] !== line.input[caret - 1] ? input[caret - 1] : undefined;
+    const position = composingChar ? caret - 1 : caret;
+    const extra = input.length > line.target.length && position >= line.target.length;
+    const hint = extra ? { key: 'Backspace', shift: false }
+        : nextKeyFor(line.target[position], composingChar) ?? nextKeyFor(line.target[caret]);
+    const caps = hint ? [guideKeys.get(hint.key), hint.shift ? guideKeys.get('Shift') : null].filter(Boolean) : [];
+    for (const cap of activeGuideKeys) cap.classList.remove('is-next');
+    for (const cap of caps) cap.classList.add('is-next');
+    activeGuideKeys = caps;
+
+    if (result) guideNextKey.textContent = '연습 완료';
+    else if (extra) guideNextKey.textContent = '추가 입력 지우기';
+    else if (hint && guideKeys.has(hint.key)) {
+        guideNextKey.textContent = (hint.shift ? 'Shift + ' : '') + (guideKeyNames[hint.key] ?? hint.key.toUpperCase());
+    } else if (line.target[position]) guideNextKey.textContent = '「' + line.target[position] + '」 입력';
+    else guideNextKey.textContent = '앞쪽 입력을 확인해 주세요.';
+}
+
+function showPracticeGuide(open) {
+    if (open && !guideKeys.size) buildGuideKeyboard();
+    practiceGuide.hidden = !open;
+    guideToggle.setAttribute('aria-expanded', String(open));
+    practiceGuide.dataset.layout = language();
+    if (open) {
+        const line = lines[lineIndex];
+        updateGuideLanguage();
+        updatePracticeGuide(line, line.visibleInput ?? line.input, caretIndex);
+    }
+    scheduleAlignment();
 }
 
 function speedLabel(lang) {
@@ -276,9 +371,10 @@ function startPractice(selectedWork = pickWork(), focus = false) {
     resetInput();
     lineIndex = 0;
     work = selectedWork;
+    inputLanguage = undefined;
     autoSpace = mobileTyping.matches;
-    const spacingHint = autoSpace ? '띄어쓰기와 문장부호는 자동으로 넣어요.' : '띄어쓰기는 직접 하고, 문장부호는 자동으로 넣어요.';
-    const practiceHint = spacingHint + ' 한 줄을 끝까지 정확하게 입력하면 자동으로 다음 줄로 넘어가요.';
+    const spacingHint = autoSpace ? '띄어쓰기는 자동으로 들어가요.' : '띄어쓰기도 직접 입력해 주세요.';
+    const practiceHint = '문장부호까지 한 줄을 정확히 입력하면 자동으로 넘어가요. ' + spacingHint;
     byId('practice-hint').textContent = practiceHint;
     byId('help-typing-hint').textContent = practiceHint;
     lines = work.lines.map(source => {
@@ -301,6 +397,8 @@ function startPractice(selectedWork = pickWork(), focus = false) {
     byId('speed-label').title = language() === 'en' ? '맞게 입력한 분당 글자 수' : '맞게 입력한 분당 한글 자소 수';
     typingInput.lang = language();
     typingInput.readOnly = false;
+    practiceGuide.dataset.layout = language();
+    if (!practiceGuide.hidden) updateGuideLanguage();
     renderWork();
     displayLine();
     refreshStats();
@@ -313,6 +411,7 @@ function renderWork() {
         paragraph.className = 'sentence-line';
         paragraph.lang = language();
         line.spans = [];
+        line.displayCharacters = [];
         let word = document.createElement('span');
         word.className = 'word';
         paragraph.append(word);
@@ -324,6 +423,7 @@ function renderWork() {
                 span.textContent = char;
                 word.append(span);
                 line.spans.push(span);
+                line.displayCharacters.push(char);
             }
             if (/\s/u.test(char)) {
                 word = document.createElement('span');
@@ -357,7 +457,7 @@ function updateHighlights(input, caret) {
     line.spans.forEach((span, index) => {
         const typed = input[index];
         if (!changedComposition && previousInput[index] === typed) return;
-        const text = typed ?? line.target[index];
+        const text = typed === undefined || typed === line.target[index] ? line.displayCharacters[index] : typed;
         const inComposition = composing && typed !== undefined && typed !== line.input[index];
         if (span.textContent !== text) span.textContent = text;
         span.classList.toggle('composing', inComposition);
@@ -373,6 +473,7 @@ function updateHighlights(input, caret) {
     if (line.extra.textContent !== extra) line.extra.textContent = extra;
     line.extra.classList.toggle('incorrect', !!extra && !composing);
     line.extra.classList.toggle('composing', !!extra && composing);
+    updatePracticeGuide(line, input, caret);
     scheduleAlignment();
 }
 
@@ -432,7 +533,7 @@ function readLineInput(value) {
 }
 
 function countInputBefore(text) {
-    return readLineInput(text).input.length;
+    return characters(text, autoSpace).length;
 }
 
 function acceptInput(selection) {
@@ -446,7 +547,6 @@ function acceptInput(selection) {
     const end = typingInput.selectionEnd ?? start;
     const { input, formatted } = readLineInput(value);
     const caret = start === value.length ? input.length : countInputBefore(value.slice(0, start));
-    // Keep punctuation in the field exactly as typed. The passage shows omitted marks.
     // Only mobile spacing is rewritten, using the number of non-space characters to restore the caret.
     if (autoSpace && formatted !== value) {
         typingInput.value = formatted;
@@ -480,6 +580,12 @@ const resetInput = bindTyping(typingInput, {
     },
     commit: acceptInput,
 });
+typingInput.addEventListener('input', observeInputLanguage, { capture: true });
+typingInput.addEventListener('compositionupdate', observeInputLanguage);
+typingInput.addEventListener('keyup', event => {
+    if (result || composing || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    updateHighlights(lines[lineIndex].input, countInputBefore(typingInput.value.slice(0, typingInput.selectionStart)));
+});
 typingInput.addEventListener('keydown', event => {
     if (event.key === 'Enter' && !composing && !event.isComposing && event.keyCode !== 229) {
         event.preventDefault();
@@ -489,14 +595,12 @@ for (const eventName of ['paste', 'drop']) {
     typingInput.addEventListener(eventName, event => event.preventDefault());
 }
 
-function practiceRecords(records) {
-    return Array.isArray(records) ? records.filter(record => record && typeof record.title === 'string') : [];
-}
-
 function savePracticeRecord(record) {
-    const records = [record, ...practiceRecords(readCookie('records'))].slice(0, 12);
+    const recent = [record, ...practiceRecords(readCookie('records'))];
+    const archived = archivePracticeRecords(recordStorage, recent);
+    const records = recent.slice(0, 12);
     while (records.length > 1 && encodeURIComponent(JSON.stringify(records)).length > 3500) records.pop();
-    return writeCookie('records', records);
+    return writeCookie('records', records) || archived;
 }
 
 function finishPractice() {
@@ -506,6 +610,7 @@ function finishPractice() {
     typingInput.readOnly = true;
     typingInput.blur();
     refreshStats();
+    updatePracticeGuide(lines[lineIndex], lines[lineIndex].input, caretIndex);
 
     byId('result-work').textContent = work.title + ' · ' + work.author;
     byId('result-speed-label').textContent = speedLabel(language());
@@ -513,10 +618,12 @@ function finishPractice() {
     byId('modal-acc').textContent = result.accuracy + '%';
     byId('modal-errors').textContent = result.errors;
     byId('result-time').textContent = '연습 시간 ' + Math.round(result.elapsedMs / 1000) + '초';
+    const savedAt = Date.now();
     const record = {
+        id: crypto.randomUUID?.() ?? savedAt + '-' + Math.random().toString(36).slice(2), savedAt,
         title: work.title, author: work.author, language: language(), mode,
         speed: result.speed, accuracy: result.accuracy, errors: result.errors,
-        date: new Date().toLocaleDateString('ko-KR'),
+        date: new Date(savedAt).toLocaleDateString('ko-KR'),
     };
     const saved = savePracticeRecord(record);
     byId('result-status').textContent = saved ? '이 브라우저에 기록을 저장했어요.' : '브라우저 저장 공간에 기록을 저장할 수 없어요.';
@@ -554,7 +661,7 @@ function renderHistory() {
     const scope = historyFilter.value;
     const records = scope === 'legacy'
         ? [...practiceRecords(readLegacy('typingRecordsV2')), ...practiceRecords(readLegacy('typingRecords'))]
-        : practiceRecords(readCookie('records'));
+        : readPracticeRecords(recordStorage, readCookie('records'));
     const selected = records.filter(record => {
         if (scope === 'work') return record.title === work.title && record.author === work.author && record.mode === mode;
         if (scope === 'ko' || scope === 'en') return record.language === scope;
@@ -691,7 +798,19 @@ for (const tab of settingsTabs) {
 }
 byId('settings-btn').addEventListener('click', event => show(settingsDialog, null, event.detail > 0));
 
-byId('help-btn').addEventListener('click', event => show(helpDialog, null, event.detail > 0));
+guideToggle.addEventListener('click', event => {
+    showPracticeGuide(practiceGuide.hidden);
+    if (event.detail > 0 && desktopTyping.matches && !result) focusTyping();
+});
+byId('settings-guide-btn').addEventListener('click', () => {
+    settingsDialog.close();
+    showPracticeGuide(true);
+    guideToggle.focus();
+});
+byId('close-guide-btn').addEventListener('click', () => {
+    showPracticeGuide(false);
+    guideToggle.focus();
+});
 byId('clear-search-btn').addEventListener('click', () => {
     searchInput.value = '';
     searchFilter.value = 'all';
