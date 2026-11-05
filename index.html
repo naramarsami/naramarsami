@@ -19,7 +19,7 @@
     <meta property="og:url" content="https://naramarsami.github.io/naramarsami/">
     <meta property="og:site_name" content="나랏말싸미">
     
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
     <div class="wrapper">
@@ -74,6 +74,7 @@
                     aria-label="타자 입력창" aria-describedby="line-instruction practice-hint"
                     placeholder="위 문장을 입력하세요">
                 <p id="practice-hint" class="sr-only">한 줄을 정확하게 입력하면 다음 줄로 이어져요.</p>
+                <p id="line-ready" class="line-ready" role="status" hidden></p>
             </article>
             <aside class="practice-guide" id="practice-guide" aria-labelledby="practice-guide-title" hidden>
                 <div class="practice-guide-heading">
@@ -197,6 +198,7 @@
             
             <div class="settings-tabs">
                 <button class="settings-tab-btn active" data-target="panel-type" aria-pressed="true">글 종류</button>
+                <button class="settings-tab-btn" data-target="panel-input" aria-pressed="false">입력</button>
                 <button class="settings-tab-btn" data-target="panel-font" aria-pressed="false">글꼴 설정</button>
                 <button class="settings-tab-btn" data-target="panel-theme" aria-pressed="false">테마 & 색상</button>
             </div>
@@ -208,6 +210,29 @@
                     <div class="type-flex">
                         <button type="button" class="type-card selected" data-mode="poem" aria-pressed="true"><span class="type-title">시 (Poem)</span><span class="type-preview" style="font-size: 1rem;">나 보기가 역겨워 가실 때에는<br>말없이 고이 보내 드리오리다.</span></button>
                         <button type="button" class="type-card" data-mode="long" aria-pressed="false"><span class="type-title">긴 글 (Long Text)</span><span class="type-preview" style="font-size: 1rem;">여름장이란 애시당초에 글러서, 해는 아직 중천에 있건만 장판은 벌써 쓸쓸하고...</span></button>
+                    </div>
+                </div>
+
+                <div class="settings-panel input-settings" id="panel-input" style="display: none;">
+                    <fieldset class="input-options">
+                        <legend>자동 줄 이동</legend>
+                        <label class="input-option">
+                            <input type="radio" name="line-advance" value="complete" checked>
+                            <span><strong>모든 줄</strong><small>끝까지 정확하게 입력하면 바로 넘어가요.</small></span>
+                        </label>
+                        <label class="input-option">
+                            <input type="radio" name="line-advance" value="period">
+                            <span><strong>마침표로 끝나는 줄만</strong><small>다른 줄은 끝까지 입력한 뒤 Enter를 눌러요.</small></span>
+                        </label>
+                    </fieldset>
+                    <div class="spacing-option">
+                        <label for="auto-spacing">자동 띄어쓰기</label>
+                        <select id="auto-spacing" aria-describedby="spacing-note">
+                            <option value="device">기기별 기본 (모바일 켬, PC 끔)</option>
+                            <option value="on">켜기</option>
+                            <option value="off">끄기</option>
+                        </select>
+                        <p id="spacing-note">입력 중에 바꾸면 다음 줄부터 적용돼요.</p>
                     </div>
                 </div>
 
@@ -270,6 +295,6 @@
         </div>
     </dialog>
 
-    <script type="module" src="script.js?v=11"></script>
+    <script type="module" src="script.js?v=12"></script>
 </body>
 </html>

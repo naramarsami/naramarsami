@@ -557,6 +557,35 @@ textarea:focus {
     min-height: 250px;
 }
 
+.input-settings { font-size: .9375rem; }
+.input-options { border: 0; min-width: 0; }
+.input-options legend, .spacing-option > label { font-weight: 700; }
+.input-option {
+    display: flex;
+    align-items: flex-start;
+    gap: .65rem;
+    margin-top: .5rem;
+    padding: .65rem .75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+}
+.input-option:has(input:checked) { border-color: var(--accent-color); background: var(--accent-light); }
+.input-option input { flex: none; margin-top: .2rem; accent-color: var(--accent-color); }
+.input-option small, .spacing-option p { display: block; margin-top: .2rem; color: var(--text-secondary); font-size: .8rem; line-height: 1.4; }
+.spacing-option { display: grid; gap: .4rem; margin-top: 1rem; }
+.spacing-option select {
+    width: 100%;
+    min-height: 44px;
+    padding: .5rem .625rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-color);
+    color: var(--text-primary);
+    font: inherit;
+}
+.line-ready { color: var(--text-secondary); font-size: .875rem; font-weight: 600; }
+
 .type-flex {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1076,19 +1105,31 @@ main:has(.practice-guide:not([hidden])) {
 }
 
 @media (max-width: 768px), (pointer: coarse) {
-    body {
-    height: auto; min-height: 100svh; overflow-y: auto; }
-    .wrapper { height: auto; min-height: 100svh; padding-bottom: 1.5rem; }
-    header { flex-wrap: wrap; gap: .75rem; }
-    .nav-controls { gap: .35rem; }
-    .nav-links { gap: .35rem; }
+    body { height: auto; min-height: 100svh; overflow-y: auto; }
+    .wrapper { height: auto; min-height: 100svh; padding: .8rem 1rem 1.25rem; }
+    header { flex-wrap: wrap; gap: .25rem; }
+    .nav-links { flex: 1 1 100%; flex-flow: row wrap; justify-content: space-between; gap: .25rem; }
+    .lang-selector { gap: .45rem; font-size: .9375rem; }
+    .nav-controls { gap: 0; }
+    .icon-btn { min-width: 44px; padding: .4rem; }
+    .icon-btn svg { width: 21px; height: 21px; }
     .icon-btn, .lang-selector button { min-height: 44px; }
-    main { padding-block: 2rem; }
-    .main-content { gap: .75rem; }
+    main { display: block; padding-block: 1.2rem; }
+    main:has(.practice-guide:not([hidden])) { padding-block: 1.2rem; }
+    .main-content { gap: .625rem; }
+    .poem-info { margin-inline-start: 0; font-size: 1.125rem; overflow-wrap: anywhere; }
+    .typing-container {
+        height: clamp(100px, 18svh, 136px);
+        mask-image: linear-gradient(to bottom, #000 0%, #000 82%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 82%, transparent 100%);
+    }
+    .text-display { padding-top: .3rem; font-size: clamp(1.2rem, 4.8vw, 1.55rem); line-height: 1.55; }
+    .sentence-line[lang="en"] { letter-spacing: normal; }
     #typing-input {
         position: static;
-        height: 44px;
+        min-height: 52px;
         min-width: 0;
+        width: 100%;
         opacity: 1;
         pointer-events: auto;
         color: var(--text-primary);
@@ -1097,7 +1138,9 @@ main:has(.practice-guide:not([hidden])) {
         border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: .6rem;
-        font-size: 1rem;
+        font-size: max(16px, 1rem);
+        line-height: 1.35;
+        scroll-margin-block: 12px;
     }
     #typing-input:focus-visible { outline: 2px solid var(--accent-color); }
     .footer-links { position: static; }
@@ -1106,18 +1149,12 @@ main:has(.practice-guide:not([hidden])) {
     .modal-content { width: calc(100% - 1.5rem); min-width: 0; max-width: none; padding: 1rem; }
     .modal-actions { gap: .45rem; }
     .modal-actions button { min-height: 44px; padding: .5rem .75rem; font-size: .875rem; }
+    .settings-tabs { gap: .2rem; margin-bottom: 1.25rem; padding: .25rem; }
+    .settings-tab-btn { min-width: 0; min-height: 44px; padding: .25rem; font-size: .8125rem; }
+    .spacing-option select { font-size: max(16px, 1rem); }
     #stage-steps button { min-height: 44px; }
     #result-modal .modal-stats { gap: clamp(.75rem, 5vw, 2rem); }
     #result-modal .modal-stat .value { font-size: 2rem; }
-}
-
-@media (max-width: 380px) {
-    .wrapper { padding-inline: 1rem; }
-    .nav-links { width: 100%; flex-direction: row; justify-content: space-between; gap: .35rem; }
-    .lang-selector { gap: .45rem; font-size: 1rem; }
-    .nav-controls { gap: 0; }
-    .icon-btn { padding: .4rem; }
-    .icon-btn svg { width: 20px; height: 20px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

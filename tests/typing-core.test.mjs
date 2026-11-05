@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { bindTyping, characters, commitInput, readInput, isLineComplete, scorePractice } from '../typing-core.mjs';
+import { bindTyping, canAutoAdvance, characters, commitInput, readInput, isLineComplete, scorePractice } from '../typing-core.mjs';
 
 function line(text, autoSpace = true) {
     return { reference: Array.from(text.normalize('NFC')), autoSpace, target: characters(text, autoSpace), input: [], attempts: 0, errors: 0 };
@@ -19,6 +19,25 @@ test('restores original spaces and accepts manually entered spaces and normalize
     enter(state, '한 글'.normalize('NFD'));
     assert.equal(isLineComplete(state), true);
     assert.deepEqual(scorePractice([state], 'ko', 60000), { speed: 6, accuracy: 100, errors: 0 });
+});
+
+test('automatic spacing keeps a manually typed English space at a word boundary', () => {
+    const state = line('Two roads.');
+    assert.equal(enter(state, 'Two '), 'Two ');
+    assert.equal(enter(state, 'Two  '), 'Two ');
+    assert.equal(enter(state, 'Twor'), 'Two r');
+    assert.equal(enter(state, 'Two roads.'), 'Two roads.');
+    assert.equal(isLineComplete(state), true);
+    assert.equal(state.errors, 0);
+    assert.equal(state.attempts, 9);
+});
+
+test('period mode reserves automatic advance for lines ending with a period', () => {
+    assert.equal(canAutoAdvance('Hello.', 'period'), true);
+    for (const text of ['Hello', 'Hello,', 'Hello!', 'Hello?']) {
+        assert.equal(canAutoAdvance(text, 'period'), false);
+        assert.equal(canAutoAdvance(text, 'complete'), true);
+    }
 });
 
 test('an empty line, a trailing error and corrected text affect progress and score separately', () => {

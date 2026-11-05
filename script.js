@@ -1,4 +1,4 @@
-import { bindTyping, characters, readInput, isAutomatic, isLineComplete, commitInput, scorePractice } from './typing-core.mjs?v=10';
+import { bindTyping, characters, readInput, isAutomatic, isLineComplete, canAutoAdvance, commitInput, measureLine, scoreTotals } from './typing-core.mjs?v=12';
 import { applyTypeface, initialFont, readCookie, readLegacy, savedSettings, settings } from './settings.mjs?v=10';
 import { archivePracticeRecords, practiceRecords, readPracticeRecords } from './practice-history.mjs?v=10';
 import { keyboardRows, koreanKeyLabels, nextKeyFor } from './typing-guide.mjs?v=10';
@@ -192,7 +192,10 @@ let alignFrame = null;
 let caretIndex = 0;
 let animateNextLine = false;
 let lineMotion;
-let autoSpace = mobileTyping.matches;
+let autoAdvanceMode = settings.lineAdvance === 'period' ? 'period' : 'complete';
+let spacingPreference = ['on', 'off'].includes(settings.autoSpacing) ? settings.autoSpacing : 'device';
+let enterAfterComposition = false;
+let practiceTotals;
 let inputLanguage;
 let activeGuideKeys = [];
 
@@ -273,7 +276,7 @@ function observeInputLanguage(event) {
 
 function updatePracticeGuide(line, input, caret) {
     if (practiceGuide.hidden) return;
-    const correct = line.target.filter((char, index) => line.input[index] === char).length;
+    const correct = line.metrics?.matchedCharacters ?? 0;
     const percent = Math.floor(correct * 100 / line.target.length);
     guideProgress.value = percent;
     guideProgressValue.textContent = percent + '%';
@@ -324,11 +327,19 @@ function elapsed() {
 
 function refreshStats() {
     const duration = elapsed();
-    const score = result ?? scorePractice(lines, language(), duration);
+    const score = result ?? scoreTotals(practiceTotals, duration);
     const speed = String(result || duration >= 1000 ? score.speed : 0);
     const accuracy = score.accuracy + '%';
     if (byId('wpm').textContent !== speed) byId('wpm').textContent = speed;
     if (byId('accuracy').textContent !== accuracy) byId('accuracy').textContent = accuracy;
+}
+
+function cacheLineMetrics(line) {
+    const metrics = measureLine(line, language());
+    for (const key of ['correctUnits', 'attempts', 'errors']) {
+        practiceTotals[key] += metrics[key] - (line.metrics?.[key] ?? 0);
+    }
+    line.metrics = metrics;
 }
 
 function startClock() {
@@ -387,15 +398,12 @@ function startPractice(selectedWork = pickWork(), focus = false, selectedStage =
     work = selectedWork;
     stageIndex = selectedStage;
     inputLanguage = undefined;
-    autoSpace = mobileTyping.matches;
-    const spacingHint = autoSpace ? '띄어쓰기는 자동으로 들어가요.' : '띄어쓰기도 직접 입력해 주세요.';
-    const practiceHint = '문장부호까지 한 줄을 정확히 입력하면 자동으로 넘어가요. ' + spacingHint;
-    byId('practice-hint').textContent = practiceHint;
-    byId('help-typing-hint').textContent = practiceHint;
+    practiceTotals = { correctUnits: 0, attempts: 0, errors: 0 };
+    const autoSpace = preferredSpacing();
     const practiceLines = work.stages?.[stageIndex]?.lines ?? work.lines;
     lines = practiceLines.map(source => {
         const text = source.normalize('NFC');
-        return { text, reference: Array.from(text), target: characters(text, autoSpace), input: [], attempts: 0, errors: 0 };
+        return { text, reference: Array.from(text), target: characters(text, autoSpace), autoSpace, input: [], attempts: 0, errors: 0 };
     }).filter(line => line.target.length);
     document.querySelectorAll('[data-language]').forEach(button => {
         const active = button.dataset.language === language();
@@ -419,52 +427,100 @@ function startPractice(selectedWork = pickWork(), focus = false, selectedStage =
     typingInput.readOnly = false;
     practiceGuide.dataset.layout = language();
     if (!practiceGuide.hidden) updateGuideLanguage();
-    renderWork();
+    textDisplay.replaceChildren(...lines.map(renderLine));
     displayLine();
     refreshStats();
     if (focus) focusTyping();
 }
 
-function renderWork() {
-    for (const line of lines) {
-        const paragraph = document.createElement('div');
-        paragraph.className = 'sentence-line';
-        paragraph.lang = language();
-        line.spans = [];
-        line.displayCharacters = [];
-        let word = document.createElement('span');
-        word.className = 'word';
-        paragraph.append(word);
-        for (const char of line.reference) {
-            if (isAutomatic(char, autoSpace)) {
-                word.append(char);
-            } else {
-                const span = document.createElement('span');
-                span.textContent = char;
-                word.append(span);
-                line.spans.push(span);
-                line.displayCharacters.push(char);
-            }
-            if (/\s/u.test(char)) {
-                word = document.createElement('span');
-                word.className = 'word';
-                paragraph.append(word);
-            }
+function renderLine(line) {
+    const paragraph = document.createElement('div');
+    paragraph.className = 'sentence-line';
+    paragraph.lang = language();
+    line.spans = [];
+    line.displayCharacters = [];
+    line.visibleCaret = undefined;
+    let word = document.createElement('span');
+    word.className = 'word';
+    paragraph.append(word);
+    for (const char of line.reference) {
+        if (isAutomatic(char, line.autoSpace)) {
+            word.append(char);
+        } else {
+            const span = document.createElement('span');
+            span.textContent = char;
+            word.append(span);
+            line.spans.push(span);
+            line.displayCharacters.push(char);
         }
-        line.extra = document.createElement('span');
-        line.extra.className = 'overflow-input';
-        paragraph.append(line.extra);
-        line.element = paragraph;
+        if (/\s/u.test(char)) {
+            word = document.createElement('span');
+            word.className = 'word';
+            paragraph.append(word);
+        }
     }
-    textDisplay.replaceChildren(...lines.map(line => line.element));
+    line.extra = document.createElement('span');
+    line.extra.className = 'overflow-input';
+    paragraph.append(line.extra);
+    line.element = paragraph;
+    return paragraph;
+}
+
+function preferredSpacing() {
+    return spacingPreference === 'device' ? mobileTyping.matches : spacingPreference === 'on';
+}
+
+function updatePracticeHint(line) {
+    const spacingHint = line.autoSpace ? '띄어쓰기는 자동으로 들어가요.' : '띄어쓰기도 직접 입력해 주세요.';
+    const advanceHint = canAutoAdvance(line.text, autoAdvanceMode)
+        ? '문장부호까지 정확히 입력하면 자동으로 넘어가요.'
+        : '끝까지 정확히 입력한 뒤 Enter를 눌러 주세요.';
+    const hint = advanceHint + ' ' + spacingHint;
+    byId('practice-hint').textContent = hint;
+    byId('help-typing-hint').textContent = hint;
+    const enterKeyHint = lineIndex === lines.length - 1 ? 'done' : 'next';
+    if (typingInput.enterKeyHint !== enterKeyHint) typingInput.enterKeyHint = enterKeyHint;
+}
+
+function showLineReady(ready) {
+    const message = byId('line-ready');
+    if (message.hidden === !ready) return;
+    message.hidden = !ready;
+    if (ready) {
+        message.textContent = lineIndex === lines.length - 1
+            ? 'Enter를 누르면 연습을 마쳐요.'
+            : 'Enter를 누르면 다음 줄로 넘어가요.';
+    }
+}
+
+function updateInputPreferences() {
+    const line = lines[lineIndex];
+    if (!line || result) return;
+    if (!line.input.length && !composing && line.autoSpace !== preferredSpacing()) {
+        displayLine();
+    } else {
+        updatePracticeHint(line);
+        showLineReady(isLineComplete(line));
+    }
 }
 
 function displayLine(animate = false) {
     const line = lines[lineIndex];
-    lines.forEach((item, index) => item.element.classList.toggle('active-line', index === lineIndex));
+    const autoSpace = preferredSpacing();
+    textDisplay.querySelector('.active-line')?.classList.remove('active-line');
+    if (line.autoSpace !== autoSpace) {
+        line.autoSpace = autoSpace;
+        line.target = characters(line.text, autoSpace);
+        const previousElement = line.element;
+        previousElement.replaceWith(renderLine(line));
+    }
+    line.element.classList.add('active-line');
     byId('line-instruction').textContent = line.text;
     typingInput.value = '';
+    enterAfterComposition = false;
     resetInput();
+    updatePracticeHint(line);
+    showLineReady(false);
     animateNextLine = animate;
     updateHighlights(line.input, line.input.length);
 }
@@ -474,18 +530,22 @@ function updateHighlights(input, caret) {
     caretIndex = caret;
     const previousInput = line.visibleInput ?? [];
     const changedComposition = line.visibleComposing !== composing;
-    line.spans.forEach((span, index) => {
+    const visibleLength = Math.min(line.spans.length, Math.max(input.length, previousInput.length));
+    for (let index = 0; index < visibleLength; index++) {
         const typed = input[index];
-        if (!changedComposition && previousInput[index] === typed) return;
+        if (!changedComposition && previousInput[index] === typed) continue;
+        const span = line.spans[index];
         const text = typed === undefined || typed === line.target[index] ? line.displayCharacters[index] : typed;
         const inComposition = composing && typed !== undefined && typed !== line.input[index];
         if (span.textContent !== text) span.textContent = text;
         span.classList.toggle('composing', inComposition);
         span.classList.toggle('correct', !inComposition && typed === line.target[index]);
         span.classList.toggle('incorrect', !inComposition && typed !== undefined && typed !== line.target[index]);
-    });
-    line.spans[line.visibleCaret]?.classList.remove('active');
-    line.spans[caret]?.classList.add('active');
+    }
+    if (line.visibleCaret !== caret) {
+        line.spans[line.visibleCaret]?.classList.remove('active');
+        line.spans[caret]?.classList.add('active');
+    }
     line.visibleInput = input;
     line.visibleCaret = caret;
     line.visibleComposing = composing;
@@ -528,8 +588,18 @@ function scheduleAlignment() {
 }
 
 window.addEventListener('resize', scheduleAlignment);
-mobileTyping.addEventListener('change', () => {
-    if (startedAt === null) startPractice(work, false, stageIndex);
+mobileTyping.addEventListener('change', updateInputPreferences);
+let viewportFrame;
+window.visualViewport?.addEventListener('resize', () => {
+    if (!mobileTyping.matches || document.activeElement !== typingInput || viewportFrame !== undefined) return;
+    viewportFrame = requestAnimationFrame(() => {
+        viewportFrame = undefined;
+        if (document.activeElement !== typingInput) return;
+        const { offsetTop, height } = window.visualViewport;
+        if (typingInput.getBoundingClientRect().bottom > offsetTop + height - 12) {
+            typingInput.scrollIntoView({ block: 'nearest' });
+        }
+    });
 });
 document.fonts?.addEventListener('loadingdone', scheduleAlignment);
 passage.addEventListener('click', () => {
@@ -537,27 +607,38 @@ passage.addEventListener('click', () => {
     else focusTyping();
 });
 
-function restoreMobileOffset(formatted, prefix) {
+function restoreSpacingOffset(formatted, value, selectionOffset) {
+    if (selectionOffset === value.length) return formatted.length;
+    const prefix = value.slice(0, selectionOffset);
     let count = Array.from(prefix.normalize('NFC').replace(/\s/gu, '')).length;
     if (!count) return 0;
     let offset = 0;
     for (const char of formatted) {
         offset += char.length;
-        if (!/\s/u.test(char) && --count === 0) return offset;
+        if (!/\s/u.test(char) && --count === 0) break;
     }
-    return formatted.length;
-}
-
-function readLineInput(value) {
-    return readInput(value, lines[lineIndex].reference, autoSpace);
+    if (/\s$/u.test(prefix)) {
+        while (offset < formatted.length && /\s/u.test(formatted[offset])) offset++;
+    }
+    return offset;
 }
 
 function countInputBefore(text) {
-    return characters(text, autoSpace).length;
+    return characters(text, lines[lineIndex].autoSpace).length;
+}
+
+function advanceLine() {
+    if (lineIndex === lines.length - 1) finishPractice();
+    else {
+        lineIndex++;
+        displayLine(true);
+    }
 }
 
 function acceptInput(selection) {
     if (result) return;
+    const enterPressed = enterAfterComposition;
+    enterAfterComposition = false;
     composing = false;
     animateNextLine = false;
     lineMotion?.cancel();
@@ -565,25 +646,24 @@ function acceptInput(selection) {
     const value = typingInput.value;
     const start = typingInput.selectionStart ?? value.length;
     const end = typingInput.selectionEnd ?? start;
-    const { input, formatted } = readLineInput(value);
+    const { input, formatted } = readInput(value, line.reference, line.autoSpace);
     const caret = start === value.length ? input.length : countInputBefore(value.slice(0, start));
-    // Only mobile spacing is rewritten, using the number of non-space characters to restore the caret.
-    if (autoSpace && formatted !== value) {
+    if (line.autoSpace && formatted !== value) {
         typingInput.value = formatted;
         typingInput.setSelectionRange(
-            restoreMobileOffset(formatted, value.slice(0, start)),
-            restoreMobileOffset(formatted, value.slice(0, end)),
+            restoreSpacingOffset(formatted, value, start),
+            restoreSpacingOffset(formatted, value, end),
         );
     }
-    commitInput(line, input, selection);
+    if (commitInput(line, input, selection)) cacheLineMetrics(line);
     if (line.input.length) startClock();
     updateHighlights(line.input, caret);
     refreshStats();
-    if (!isLineComplete(line)) return;
-    if (lineIndex === lines.length - 1) finishPractice();
-    else {
-        lineIndex++;
-        displayLine(true);
+    const complete = isLineComplete(line);
+    if (complete && (enterPressed || canAutoAdvance(line.text, autoAdvanceMode))) {
+        advanceLine();
+    } else {
+        showLineReady(complete);
     }
 }
 
@@ -594,7 +674,7 @@ const resetInput = bindTyping(typingInput, {
         composing = true;
         animateNextLine = false;
         lineMotion?.cancel();
-        const { input } = readLineInput(value);
+        const input = characters(value, lines[lineIndex].autoSpace);
         if (input.length) startClock();
         updateHighlights(input, offset === value.length ? input.length : countInputBefore(value.slice(0, offset)));
     },
@@ -606,10 +686,21 @@ typingInput.addEventListener('keyup', event => {
     if (result || composing || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     updateHighlights(lines[lineIndex].input, countInputBefore(typingInput.value.slice(0, typingInput.selectionStart)));
 });
-typingInput.addEventListener('keydown', event => {
-    if (event.key === 'Enter' && !composing && !event.isComposing && event.keyCode !== 229) {
-        event.preventDefault();
+function handleEnter(event) {
+    if (composing || event.isComposing || event.keyCode === 229) {
+        enterAfterComposition = true;
+        return;
     }
+    event.preventDefault();
+    if (!result && !event.repeat && isLineComplete(lines[lineIndex])) advanceLine();
+}
+
+typingInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') handleEnter(event);
+    else if (event.key !== 'Process') enterAfterComposition = false;
+});
+typingInput.addEventListener('beforeinput', event => {
+    if (event.inputType === 'insertLineBreak' || event.inputType === 'insertParagraph') handleEnter(event);
 });
 for (const eventName of ['paste', 'drop']) {
     typingInput.addEventListener(eventName, event => event.preventDefault());
@@ -661,7 +752,8 @@ function startStageCountdown() {
 
 function finishPractice() {
     const elapsedMs = elapsed();
-    result = { ...scorePractice(lines, language(), elapsedMs), elapsedMs };
+    result = { ...scoreTotals(practiceTotals, elapsedMs), elapsedMs };
+    showLineReady(false);
     stopClock();
     typingInput.readOnly = true;
     typingInput.blur();
@@ -860,6 +952,8 @@ searchFilter.addEventListener('change', renderSearch);
 
 const fontChoices = document.querySelectorAll('[data-font-choice]');
 const themeChoices = document.querySelectorAll('[data-theme-choice]');
+const advanceChoices = document.querySelectorAll('[name="line-advance"]');
+const autoSpacing = byId('auto-spacing');
 let font = initialFont;
 let theme = settings && Array.from(themeChoices).some(button => button.dataset.themeChoice === settings.theme)
     ? settings.theme : 'light';
@@ -874,16 +968,35 @@ function applySettings() {
     }
     alignPassage();
 }
+function saveSettings() {
+    writeCookie('settings', { font, theme, lineAdvance: autoAdvanceMode, autoSpacing: spacingPreference });
+}
+
 applySettings();
-if (!savedSettings) writeCookie('settings', { font, theme });
+if (!savedSettings) saveSettings();
 for (const button of [...fontChoices, ...themeChoices]) {
     button.addEventListener('click', () => {
         font = button.dataset.fontChoice ?? font;
         theme = button.dataset.themeChoice ?? theme;
         applySettings();
-        writeCookie('settings', { font, theme });
+        saveSettings();
     });
 }
+for (const choice of advanceChoices) {
+    choice.checked = choice.value === autoAdvanceMode;
+    choice.addEventListener('change', () => {
+        if (!choice.checked) return;
+        autoAdvanceMode = choice.value;
+        saveSettings();
+        updateInputPreferences();
+    });
+}
+autoSpacing.value = spacingPreference;
+autoSpacing.addEventListener('change', () => {
+    spacingPreference = autoSpacing.value;
+    saveSettings();
+    updateInputPreferences();
+});
 const settingsTabs = document.querySelectorAll('.settings-tab-btn');
 for (const tab of settingsTabs) {
     tab.addEventListener('click', () => {

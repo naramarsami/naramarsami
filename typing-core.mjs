@@ -81,20 +81,29 @@ export function bindTyping(input, { preview, commit, countBefore = text => chara
 }
 
 export function readInput(value, target, autoSpace) {
-    const input = characters(value, autoSpace);
-    if (!autoSpace) return { input, formatted: value };
+    if (!autoSpace) return { input: characters(value, false), formatted: value };
 
+    const normalized = value.normalize('NFC');
+    const input = [];
     let index = 0;
     let formatted = '';
-    for (const char of value.normalize('NFC')) {
+    for (const char of normalized) {
         if (isAutomatic(char, true)) continue;
         while (index < target.length && isAutomatic(target[index], true)) {
             formatted += target[index++];
         }
+        input.push(equivalentMarks[char] ?? char);
         formatted += char;
         index++;
     }
+    if (/\s$/u.test(normalized) && index < target.length && isAutomatic(target[index], true)) {
+        formatted += target[index];
+    }
     return { input, formatted };
+}
+
+export function canAutoAdvance(text, mode) {
+    return mode === 'complete' || text.trimEnd().endsWith('.');
 }
 
 export function isLineComplete(line) {
@@ -103,9 +112,9 @@ export function isLineComplete(line) {
 }
 
 export function commitInput(line, next, selection) {
-    if (next.join('') === line.input.join('')) return;
     let first = 0;
     while (first < line.input.length && first < next.length && line.input[first] === next[first]) first++;
+    if (first === line.input.length && first === next.length) return false;
 
     let oldEnd = line.input.length;
     let newEnd = next.length;
@@ -130,6 +139,7 @@ export function commitInput(line, next, selection) {
         if (next[index] !== line.target[index]) line.errors++;
     }
     line.input = next;
+    return true;
 }
 
 function unitsFor(character, language) {
@@ -137,20 +147,33 @@ function unitsFor(character, language) {
     return language === 'ko' && /^[가-힣]$/u.test(character) ? character.normalize('NFD').length : 1;
 }
 
-export function scorePractice(lines, language, elapsedMs) {
+export function measureLine(line, language) {
     let correctUnits = 0;
-    let attempts = 0;
-    let errors = 0;
-    for (const line of lines) {
-        attempts += line.attempts;
-        errors += line.errors;
-        line.input.forEach((char, index) => {
-            if (char === line.target[index]) correctUnits += unitsFor(char, language);
-        });
+    let matchedCharacters = 0;
+    for (let index = 0; index < line.input.length; index++) {
+        const char = line.input[index];
+        if (char !== line.target[index]) continue;
+        correctUnits += unitsFor(char, language);
+        matchedCharacters++;
     }
+    return { correctUnits, matchedCharacters, attempts: line.attempts, errors: line.errors };
+}
+
+export function scoreTotals({ correctUnits, attempts, errors }, elapsedMs) {
     return {
         speed: elapsedMs > 0 ? Math.round(correctUnits * 60000 / elapsedMs) : 0,
         accuracy: attempts ? Math.round((attempts - errors) * 1000 / attempts) / 10 : 100,
         errors,
     };
+}
+
+export function scorePractice(lines, language, elapsedMs) {
+    const totals = { correctUnits: 0, attempts: 0, errors: 0 };
+    for (const line of lines) {
+        const metrics = measureLine(line, language);
+        totals.correctUnits += metrics.correctUnits;
+        totals.attempts += metrics.attempts;
+        totals.errors += metrics.errors;
+    }
+    return scoreTotals(totals, elapsedMs);
 }
