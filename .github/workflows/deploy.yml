@@ -37,7 +37,7 @@ jobs:
       - name: 공개 사이트 파일을 모읍니다.
         run: |
           mkdir -p _site
-          cp CNAME index.html about.html brand.html style.css guide.css script.js typing-core.mjs settings.mjs typing-guide.mjs practice-history.mjs Gungsuh-Regular.woff2 Gungsuh-OFL.txt _site/
+          cp CNAME index.html about.html brand.html style.css guide.css script.js typing-core.mjs settings.mjs typing-guide.mjs practice-history.mjs korean-literature.mjs Gungsuh-Regular.woff2 Gungsuh-OFL.txt _site/
         
       - name: Upload artifact 배포할 파일을 업로드합니다.
         uses: actions/upload-pages-artifact@v3

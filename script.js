@@ -2,6 +2,7 @@ import { bindTyping, characters, readInput, isAutomatic, isLineComplete, commitI
 import { applyTypeface, initialFont, readCookie, readLegacy, savedSettings, settings } from './settings.mjs?v=10';
 import { archivePracticeRecords, practiceRecords, readPracticeRecords } from './practice-history.mjs?v=10';
 import { keyboardRows, koreanKeyLabels, nextKeyFor } from './typing-guide.mjs?v=10';
+import { additionalPoems, koreanNovels } from './korean-literature.mjs?v=11';
 
 const poemCollections = [
     {
@@ -93,20 +94,7 @@ const poemCollections = [
 ];
 
 const longCollections = [
-    {
-        title: "메밀꽃 필 무렵",
-        author: "이효석",
-        keywords: ["나귀", "달밤", "장돌뱅이", "소설", "이효석", "추억", "사랑"],
-        lines: [
-            "여름장이란 애시당초에 글러서, 해는 아직 중천에 있건만",
-            "장판은 벌써 쓸쓸하고 더운 햇발이 벌여놓은 전휘장 밑으로",
-            "등줄기를 훅훅 볶는다.",
-            "마을 사람들은 거지반 돌아간 뒤요,",
-            "팔리지 못한 나무꾼 패가 길거리에 궁싯거리고들 있으나,",
-            "석유병이나 받고 고기마리나 사면 족할 이 축들을 바라고",
-            "언제까지든지 버티고 있을 법은 없다."
-        ]
-    },
+    ...koreanNovels,
     {
         title: "애국가",
         author: "작자미상",
@@ -119,17 +107,6 @@ const longCollections = [
             "이 기상과 이 맘으로 충성을 다하여 괴로우나 즐거우나 나라 사랑하세"
         ]
     },
-    {
-        title: "동백꽃",
-        author: "김유정",
-        keywords: ["감자", "사랑", "닭", "싸움", "소년", "소녀", "유머", "소설", "김유정"],
-        lines: [
-            "오늘도 우리 수탉이 막 조였다. 내가 점심을 먹고 나무를 하러 갈 양으로 나올 때였다.",
-            "산으로 올라서려니까 등 뒤에서 푸드득푸드득 하고 닭의 홰치는 소리가 들린다.",
-            "깜짝 놀라며 고개를 돌려보니 아니나 다르랴, 두 놈이 또 붙었다.",
-            "점순네 수탉은 대강이가 크고 억세게 생겨서 얼핏 보면 꼭 개 같았다."
-        ]
-    }
 ];
 
 const englishCollections = [
@@ -178,6 +155,9 @@ const typingInput = byId('typing-input');
 const textDisplay = byId('text-display');
 const passage = textDisplay.parentElement;
 const resultDialog = byId('result-modal');
+const stagePreview = byId('stage-preview');
+const countdownText = byId('stage-countdown');
+const stageSteps = byId('stage-steps');
 const searchDialog = byId('search-modal');
 const historyDialog = byId('ranking-modal');
 const settingsDialog = byId('settings-modal');
@@ -194,11 +174,14 @@ const desktopTyping = matchMedia('(min-width: 769px) and (pointer: fine)');
 const mobileTyping = matchMedia('(max-width: 768px), (pointer: coarse)');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
-const collections = { poem: poemCollections, long: longCollections, en: englishCollections };
+const collections = { poem: [...poemCollections, ...additionalPoems], long: longCollections, en: englishCollections };
 const modeLabels = { poem: '한글 시', long: '긴 글', en: '영어' };
 let mode = 'poem';
 let koreanMode = 'poem';
 let work;
+let stageIndex = 0;
+let completedStages = new Set();
+let stageTimer;
 let lines = [];
 let lineIndex = 0;
 let composing = false;
@@ -361,7 +344,31 @@ function pickWork() {
     return choices[Math.floor(Math.random() * choices.length)];
 }
 
-function startPractice(selectedWork = pickWork(), focus = false) {
+function renderNovelStage() {
+    const stage = work.stages?.[stageIndex];
+    byId('novel-stage').hidden = !stage;
+    if (!stage) return;
+    byId('stage-title').textContent = stage.title + ' · 발췌';
+    stageSteps.replaceChildren(...work.stages.map((item, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        const label = (index + 1) + '단계';
+        button.textContent = label;
+        button.setAttribute('aria-label', label + ' ' + item.title + (completedStages.has(index + 1) ? ' 완료' : ''));
+        if (index === stageIndex) button.setAttribute('aria-current', 'step');
+        if (completedStages.has(index + 1)) button.classList.add('is-done');
+        button.addEventListener('click', event => {
+            if (stageIndex === index) return;
+            const focusTypingField = event.detail > 0 && desktopTyping.matches;
+            startPractice(work, focusTypingField, index);
+            if (!focusTypingField) stageSteps.querySelector('[aria-current="step"]')?.focus();
+        });
+        return button;
+    }));
+}
+
+function startPractice(selectedWork = pickWork(), focus = false, selectedStage = 0) {
+    stopStageCountdown();
     stopClock();
     startedAt = null;
     result = null;
@@ -370,14 +377,23 @@ function startPractice(selectedWork = pickWork(), focus = false) {
     lineMotion?.cancel();
     resetInput();
     lineIndex = 0;
+    if (selectedWork !== work) {
+        completedStages = new Set(selectedWork.stages
+            ? readPracticeRecords(recordStorage, readCookie('records'))
+                .filter(record => record.title === selectedWork.title && record.author === selectedWork.author)
+                .map(record => record.stage).filter(Number.isInteger)
+            : []);
+    }
     work = selectedWork;
+    stageIndex = selectedStage;
     inputLanguage = undefined;
     autoSpace = mobileTyping.matches;
     const spacingHint = autoSpace ? '띄어쓰기는 자동으로 들어가요.' : '띄어쓰기도 직접 입력해 주세요.';
     const practiceHint = '문장부호까지 한 줄을 정확히 입력하면 자동으로 넘어가요. ' + spacingHint;
     byId('practice-hint').textContent = practiceHint;
     byId('help-typing-hint').textContent = practiceHint;
-    lines = work.lines.map(source => {
+    const practiceLines = work.stages?.[stageIndex]?.lines ?? work.lines;
+    lines = practiceLines.map(source => {
         const text = source.normalize('NFC');
         return { text, reference: Array.from(text), target: characters(text, autoSpace), input: [], attempts: 0, errors: 0 };
     }).filter(line => line.target.length);
@@ -393,6 +409,10 @@ function startPractice(selectedWork = pickWork(), focus = false) {
     });
     byId('poem-title').textContent = work.title;
     byId('poem-author').textContent = work.author;
+    const sourceLink = byId('work-source');
+    sourceLink.hidden = !work.source;
+    if (work.source) sourceLink.href = work.source;
+    renderNovelStage();
     byId('speed-label').textContent = language() === 'en' ? '분당 글자' : '타수';
     byId('speed-label').title = language() === 'en' ? '맞게 입력한 분당 글자 수' : '맞게 입력한 분당 한글 자소 수';
     typingInput.lang = language();
@@ -509,7 +529,7 @@ function scheduleAlignment() {
 
 window.addEventListener('resize', scheduleAlignment);
 mobileTyping.addEventListener('change', () => {
-    if (startedAt === null) startPractice(work);
+    if (startedAt === null) startPractice(work, false, stageIndex);
 });
 document.fonts?.addEventListener('loadingdone', scheduleAlignment);
 passage.addEventListener('click', () => {
@@ -603,6 +623,42 @@ function savePracticeRecord(record) {
     return writeCookie('records', records) || archived;
 }
 
+function stopStageCountdown() {
+    clearTimeout(stageTimer);
+    stageTimer = undefined;
+    stagePreview.classList.remove('is-counting');
+    countdownText.textContent = '자동 이동 멈춤';
+}
+
+function openNextStage(focus = false) {
+    if (!resultDialog.open || !result || !work.stages?.[stageIndex + 1]) return;
+    stopStageCountdown();
+    resultDialog.close();
+    startPractice(work, focus, stageIndex + 1);
+    if (!focus) stageSteps.querySelector('[aria-current="step"]')?.focus({ preventScroll: true });
+}
+
+function startStageCountdown() {
+    if (document.hidden) return;
+    const endAt = performance.now() + 5000;
+    stagePreview.classList.add('is-counting');
+    function tick() {
+        if (!resultDialog.open || document.hidden) {
+            stopStageCountdown();
+            return;
+        }
+        const remaining = endAt - performance.now();
+        if (remaining <= 0) {
+            openNextStage(desktopTyping.matches);
+            return;
+        }
+        const seconds = Math.ceil(remaining / 1000);
+        countdownText.textContent = seconds + '초 후 자동 이동';
+        stageTimer = setTimeout(tick, Math.max(1, remaining - (seconds - 1) * 1000));
+    }
+    tick();
+}
+
 function finishPractice() {
     const elapsedMs = elapsed();
     result = { ...scorePractice(lines, language(), elapsedMs), elapsedMs };
@@ -612,7 +668,26 @@ function finishPractice() {
     refreshStats();
     updatePracticeGuide(lines[lineIndex], lines[lineIndex].input, caretIndex);
 
-    byId('result-work').textContent = work.title + ' · ' + work.author;
+    const stage = work.stages?.[stageIndex];
+    const nextStage = work.stages?.[stageIndex + 1];
+    if (stage) {
+        completedStages.add(stageIndex + 1);
+        renderNovelStage();
+    }
+    const heading = byId('modal-title');
+    const allStagesDone = stage && work.stages.every((_, index) => completedStages.has(index + 1));
+    heading.textContent = stage ? (allStagesDone && !nextStage ? '작품 연습 완료' : (stageIndex + 1) + '단계 완료') : '작성 완료';
+    byId('result-work').textContent = work.title + ' · ' + (stage ? stage.title : work.author);
+    stagePreview.hidden = !nextStage;
+    byId('next-btn').hidden = Boolean(nextStage);
+    byId('result-close-form').hidden = Boolean(nextStage);
+    byId('close-result-btn').textContent = stage ? '그만하기' : '닫기';
+    byId('retry-btn').textContent = stage ? '이 단계 다시' : '같은 작품 다시';
+    if (nextStage) {
+        byId('stage-preview-step').textContent = '다음 단계 · ' + (stageIndex + 2) + ' / ' + work.stages.length;
+        byId('stage-preview-title').textContent = nextStage.title;
+        byId('stage-preview-line').textContent = nextStage.lines[0];
+    }
     byId('result-speed-label').textContent = speedLabel(language());
     byId('modal-wpm').textContent = result.speed;
     byId('modal-acc').textContent = result.accuracy + '%';
@@ -622,17 +697,32 @@ function finishPractice() {
     const record = {
         id: crypto.randomUUID?.() ?? savedAt + '-' + Math.random().toString(36).slice(2), savedAt,
         title: work.title, author: work.author, language: language(), mode,
+        ...(stage ? { stage: stageIndex + 1, stageTitle: stage.title } : {}),
         speed: result.speed, accuracy: result.accuracy, errors: result.errors,
         date: new Date(savedAt).toLocaleDateString('ko-KR'),
     };
     const saved = savePracticeRecord(record);
     byId('result-status').textContent = saved ? '이 브라우저에 기록을 저장했어요.' : '브라우저 저장 공간에 기록을 저장할 수 없어요.';
-    show(resultDialog);
+    show(resultDialog, heading);
+    if (nextStage) startStageCountdown();
 }
 
+byId('continue-stage-btn').addEventListener('click', () => openNextStage(true));
+byId('stop-stage-btn').addEventListener('click', () => {
+    stopStageCountdown();
+    resultDialog.close();
+    stageSteps.querySelector('[aria-current="step"]')?.focus();
+});
+resultDialog.addEventListener('cancel', stopStageCountdown);
+resultDialog.addEventListener('close', () => {
+    if (!resultDialog.open) stopStageCountdown();
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopStageCountdown();
+});
 byId('retry-btn').addEventListener('click', () => {
     resultDialog.close();
-    startPractice(work, true);
+    startPractice(work, true, stageIndex);
 });
 byId('next-btn').addEventListener('click', () => {
     resultDialog.close();
@@ -641,6 +731,7 @@ byId('next-btn').addEventListener('click', () => {
 
 byId('share-btn').addEventListener('click', async () => {
     if (!result) return;
+    stopStageCountdown();
     const text = '나랏말싸미 · ' + work.title + '\n' + speedLabel(language()) + ' ' + result.speed + ' · 정확도 ' + result.accuracy + '%';
     try {
         if (navigator.share) {
@@ -679,7 +770,9 @@ function renderHistory() {
         const item = document.createElement('li');
         const title = document.createElement('strong');
         const metrics = document.createElement('p');
-        title.textContent = record.title;
+        title.textContent = Number.isInteger(record.stage)
+            ? [record.title, record.stage + '단계', record.stageTitle].filter(Boolean).join(' · ')
+            : record.title;
         metrics.textContent = scope === 'legacy'
             ? '이전 기록 · 타수 ' + (record.speed ?? record.wpm) + ' · 정확도 ' + (record.accuracy !== undefined ? record.accuracy + '%' : record.acc) + ' · ' + record.date
             : speedLabel(record.language) + ' ' + record.speed + ' · 정확도 ' + record.accuracy + '% · ' + record.date;
@@ -688,6 +781,7 @@ function renderHistory() {
     }
 }
 function openHistory(event) {
+    if (resultDialog.open) stopStageCountdown();
     historyFilter.value = 'all';
     renderHistory();
     show(historyDialog, null, event.detail > 0);
@@ -719,13 +813,17 @@ byId('skip-btn').addEventListener('click', () => startPractice(undefined, deskto
 const searchInput = byId('search-input');
 const searchFilter = byId('search-filter');
 const searchIndex = Object.entries(collections).flatMap(([kind, texts]) => texts.map(text => ({
-    text, kind, query: [text.title, text.author, ...(text.keywords ?? [])].join(' ').normalize('NFC').toLowerCase(),
+    text, kind, query: [text.title, text.author, ...(text.keywords ?? []), ...(text.stages ? ['소설', ...text.stages.map(stage => stage.title)] : [])]
+        .join(' ').normalize('NFC').toLowerCase(),
 })));
 
 function renderSearch() {
     const query = searchInput.value.normalize('NFC').toLowerCase().trim().split(/\s+/u).filter(Boolean);
     const kind = searchFilter.value;
-    const matches = searchIndex.filter(item => (kind === 'all' || item.kind === kind) && query.every(word => item.query.includes(word)));
+    const matches = searchIndex.filter(item => {
+        const matchesKind = kind === 'novel' ? Boolean(item.text.stages) : kind === 'all' || item.kind === kind;
+        return matchesKind && query.every(word => item.query.includes(word));
+    });
     const list = byId('search-results');
     list.replaceChildren();
     for (const item of matches) {
@@ -735,7 +833,8 @@ function renderSearch() {
         const title = document.createElement('strong');
         const caption = document.createElement('span');
         title.textContent = item.text.title;
-        caption.textContent = item.text.author + ' · ' + modeLabels[item.kind];
+        const type = item.text.stages ? '소설 · ' + item.text.stages.length + '단계' : modeLabels[item.kind];
+        caption.textContent = item.text.author + ' · ' + type;
         title.className = 'sr-title';
         caption.className = 'sr-author';
         button.append(title, caption);

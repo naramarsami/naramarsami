@@ -19,7 +19,7 @@
     <meta property="og:url" content="https://naramarsami.github.io/naramarsami/">
     <meta property="og:site_name" content="나랏말싸미">
     
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
     <div class="wrapper">
@@ -55,6 +55,11 @@
                     <span id="poem-title"></span>
                     <span class="divider">-</span>
                     <span id="poem-author"></span>
+                    <a id="work-source" class="work-source" target="_blank" rel="noopener" hidden>원문 보기 ↗</a>
+                </div>
+                <div class="novel-stage" id="novel-stage" hidden>
+                    <nav id="stage-steps" aria-label="소설 연습 단계"></nav>
+                    <p id="stage-title"></p>
                 </div>
                 
                 <section class="typing-container" aria-label="타자 연습 영역">
@@ -121,8 +126,21 @@
     <!-- Result Modal -->
     <dialog id="result-modal" class="modal" aria-labelledby="modal-title">
         <div class="modal-content">
-            <h2 class="modal-title" id="modal-title">작성 완료</h2>
+            <h2 class="modal-title" id="modal-title" tabindex="-1">작성 완료</h2>
             <p id="result-work" class="modal-poem-info"></p>
+            <section class="stage-preview" id="stage-preview" aria-labelledby="stage-preview-title" hidden>
+                <div class="stage-preview-meta">
+                    <span id="stage-preview-step"></span>
+                    <span id="stage-countdown" role="timer"></span>
+                </div>
+                <h3 id="stage-preview-title"></h3>
+                <p class="stage-preview-line" id="stage-preview-line"></p>
+                <div class="stage-countdown-track" aria-hidden="true"></div>
+                <div class="stage-preview-actions">
+                    <button type="button" id="stop-stage-btn">그만하기</button>
+                    <button type="button" id="continue-stage-btn">지금 이어쓰기 <span aria-hidden="true">→</span></button>
+                </div>
+            </section>
             
             <div class="modal-stats">
                 <div class="modal-stat">
@@ -147,7 +165,7 @@
                 <button id="next-btn" title="다음 작품을 연습합니다">다음 글로</button>
             </div>
             <p id="result-status" role="status" class="dialog-note"></p>
-            <form method="dialog"><button class="dialog-close" type="submit">닫기</button></form>
+            <form id="result-close-form" method="dialog"><button id="close-result-btn" class="dialog-close" type="submit">닫기</button></form>
         </div>
     </dialog>
 
@@ -237,6 +255,7 @@
             <label class="dialog-filter" for="search-filter">작품 종류
                 <select id="search-filter">
                     <option value="all">전체</option><option value="poem">한글 시</option>
+                    <option value="novel">소설</option>
                     <option value="long">긴 글</option><option value="en">영어</option>
                 </select>
             </label>
@@ -251,6 +270,6 @@
         </div>
     </dialog>
 
-    <script type="module" src="script.js?v=10"></script>
+    <script type="module" src="script.js?v=11"></script>
 </body>
 </html>

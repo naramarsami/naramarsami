@@ -191,6 +191,36 @@ main {
 
 #poem-title { font-family: var(--brand-font, Gungsuh, "궁서", serif); }
 
+.work-source {
+    display: inline-block;
+    margin-inline-start: .7rem;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-underline-offset: .2em;
+}
+.novel-stage { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem .75rem; }
+#stage-steps { display: flex; flex-wrap: wrap; gap: .35rem; }
+#stage-steps button {
+    min-height: 36px;
+    padding: .28rem .65rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-color);
+    color: var(--text-primary);
+    font-size: .8125rem;
+    box-shadow: none;
+    transform: none;
+}
+#stage-steps button:hover { background: var(--card-bg); }
+#stage-steps button[aria-current="step"] {
+    border-color: var(--text-primary);
+    background: var(--text-primary);
+    color: var(--bg-color);
+}
+#stage-steps button.is-done::after { content: ' ✓'; }
+#stage-title { color: var(--text-secondary); font-size: .8125rem; }
+
 .typing-container {
     width: 100%;
     position: relative;
@@ -894,6 +924,59 @@ dialog.modal[open] .modal-content { animation: modal-enter 160ms ease-out; }
     to { opacity: 1; transform: translateY(0); }
 }
 .modal-actions { flex-wrap: wrap; }
+#result-modal:has(.stage-preview:not([hidden])) .modal-content { padding-block: 1.5rem; }
+#result-modal:has(.stage-preview:not([hidden])) .modal-poem-info,
+#result-modal:has(.stage-preview:not([hidden])) .modal-stats { margin-bottom: 1rem; }
+#result-modal:has(.stage-preview:not([hidden])) .modal-actions { gap: .5rem; }
+#result-modal:has(.stage-preview:not([hidden])) .modal-actions button { padding: .6rem .8rem; font-size: .875rem; }
+.stage-preview {
+    margin-bottom: 1.15rem;
+    padding: 1rem;
+    border: 1px solid #303b4b;
+    border-radius: 12px;
+    background: #1b2330;
+    color: #f6f8fb;
+    text-align: left;
+}
+.stage-preview-meta {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .25rem .75rem;
+    color: #d5dfeb;
+    font-size: .8rem;
+    font-weight: 700;
+}
+#stage-countdown { font-variant-numeric: tabular-nums; }
+.stage-preview h3 { margin: .4rem 0; font-size: 1.25rem; }
+.stage-preview-line { margin-bottom: .75rem; color: #d5dfeb; font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
+.stage-countdown-track { height: 4px; overflow: hidden; border-radius: 8px; background: #546174; }
+.stage-countdown-track::before {
+    content: '';
+    display: block;
+    height: 100%;
+    background: #a9d2ff;
+    transform: scaleX(0);
+    transform-origin: left;
+}
+.stage-preview.is-counting .stage-countdown-track::before { animation: stage-countdown-fill 5s linear forwards; }
+@keyframes stage-countdown-fill { to { transform: scaleX(1); } }
+.stage-preview-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .45rem; margin-top: .75rem; }
+.stage-preview-actions button {
+    min-height: 44px;
+    padding: .5rem .8rem;
+    border: 1px solid #8994a5;
+    border-radius: 7px;
+    color: #f6f8fb;
+    background: transparent;
+    font-size: .875rem;
+    transform: none;
+    box-shadow: none;
+}
+.stage-preview-actions button:hover { background: #374458; }
+#continue-stage-btn { color: #192331; background: #f6f8fb; border-color: #f6f8fb; }
+#continue-stage-btn:hover { background: #d9eaff; }
+.stage-preview-actions button:focus-visible { outline-color: #a9d2ff; }
 .dialog-note, .dialog-filter { margin-block: .65rem; font-size: .875rem; color: var(--text-secondary); }
 .dialog-filter select { margin-inline-start: .4rem; max-width: 100%; color: var(--text-primary); background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: .4rem; font: inherit; }
 .dialog-close { margin-top: .5rem; }
@@ -1023,6 +1106,9 @@ main:has(.practice-guide:not([hidden])) {
     .modal-content { width: calc(100% - 1.5rem); min-width: 0; max-width: none; padding: 1rem; }
     .modal-actions { gap: .45rem; }
     .modal-actions button { min-height: 44px; padding: .5rem .75rem; font-size: .875rem; }
+    #stage-steps button { min-height: 44px; }
+    #result-modal .modal-stats { gap: clamp(.75rem, 5vw, 2rem); }
+    #result-modal .modal-stat .value { font-size: 2rem; }
 }
 
 @media (max-width: 380px) {
@@ -1038,4 +1124,5 @@ main:has(.practice-guide:not([hidden])) {
     dialog.modal[open] .modal-content { animation: none; }
     .text-display { transition: none; }
     .sentence-line span.active::before { animation: none; }
+    .stage-preview.is-counting .stage-countdown-track::before { animation: none; }
 }
