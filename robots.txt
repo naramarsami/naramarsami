@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://xn--lg3by0shrak48b.kro.kr/sitemap.xml
