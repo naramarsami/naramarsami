@@ -179,6 +179,19 @@
     color: var(--muted);
 }
 
+.guide-copy > * + * {
+    margin-top: .65rem;
+}
+
+.guide-copy ul {
+    padding-inline-start: 1.25rem;
+    color: var(--muted);
+}
+
+.guide-copy li + li {
+    margin-top: .35rem;
+}
+
 .guide-section .wordmark-sample {
     margin-bottom: 0.75rem;
     padding: 1rem 1.25rem;
