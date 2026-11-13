@@ -2,6 +2,7 @@ const wikisource = 'https://ko.wikisource.org/wiki/';
 
 export const additionalPoems = [
     {
+        slug: 'mountain-flowers',
         title: '산유화', author: '김소월', keywords: ['산', '꽃', '자연', '계절'],
         source: wikisource + '진달래꽃_(시집)/산유화',
         lines: [
@@ -12,11 +13,13 @@ export const additionalPoems = [
         ],
     },
     {
+        slug: 'mother-sister',
         title: '엄마야 누나야', author: '김소월', keywords: ['가족', '강변', '자연'],
         source: wikisource + '엄마야_누나야',
         lines: ['엄마야 누나야 강변 살자,', '뜰에는 반짝는 금모래빛,', '뒷문 밖에는 갈잎의 노래', '엄마야 누나야 강변 살자.'],
     },
     {
+        slug: 'the-road',
         title: '가는 길', author: '김소월', keywords: ['이별', '그리움', '길', '강물'],
         source: wikisource + '진달래꽃_(시집)/가는_길',
         lines: [
@@ -26,6 +29,7 @@ export const additionalPoems = [
         ],
     },
     {
+        slug: 'ferryboat-and-passenger',
         title: '나룻배와 행인', author: '한용운', keywords: ['기다림', '사랑', '강', '님의 침묵'],
         source: wikisource + '님의_침묵/나룻배와_행인',
         lines: [
@@ -44,6 +48,7 @@ export const additionalPoems = [
 // Stages use excerpts. Line breaks and parenthetical Hanja are adapted for typing.
 export const koreanNovels = [
     {
+        slug: 'when-buckwheat-flowers-bloom',
         title: '메밀꽃 필 무렵', author: '이효석', keywords: ['나귀', '달밤', '장돌뱅이', '추억', '사랑'],
         source: wikisource + '메밀꽃_필_무렵',
         stages: [
@@ -63,6 +68,7 @@ export const koreanNovels = [
         ],
     },
     {
+        slug: 'camellia',
         title: '동백꽃', author: '김유정', keywords: ['감자', '사랑', '닭', '싸움', '소년', '소녀', '유머'],
         source: wikisource + '동백꽃',
         stages: [
@@ -80,6 +86,7 @@ export const koreanNovels = [
         ],
     },
     {
+        slug: 'a-lucky-day',
         title: '운수 좋은 날', author: '현진건', keywords: ['김 첨지', '인력거', '비', '설렁탕', '근대'],
         source: wikisource + '운수_좋은_날',
         stages: [
@@ -100,6 +107,7 @@ export const koreanNovels = [
         ],
     },
     {
+        slug: 'hometown',
         title: '고향', author: '현진건', keywords: ['기차', '서울', '동행', '일제 강점기', '근대'],
         source: wikisource + '고향_(현진건)',
         stages: [

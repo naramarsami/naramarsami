@@ -192,6 +192,33 @@
     margin-top: .35rem;
 }
 
+.works-list {
+    padding: 0;
+    list-style: none;
+}
+
+.works-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.15rem 1rem;
+    padding-block: 0.55rem;
+}
+
+.works-list li + li {
+    border-top: 1px solid var(--rule);
+}
+
+.works-list a {
+    font-weight: 700;
+}
+
+.works-list span {
+    color: var(--muted);
+    font-size: 0.875rem;
+}
+
 .guide-section .wordmark-sample {
     margin-bottom: 0.75rem;
     padding: 1rem 1.25rem;
